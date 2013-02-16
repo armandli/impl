@@ -1,6 +1,7 @@
 #include <string>
 #include <vector>
 #include <bitset>
+#include <boost/dynamic_bitset.hpp>
 #include <iostream>
 using namespace std;
 
@@ -11,18 +12,16 @@ int main(){
   string c = a + 'k';
   cout << c << endl;
 
-  vector<bool> v;
-  for (int i = 0; i < 13; ++i)
-    v.push_back(i % 2 ? true : false);
-  bitset<v.size()> bs;
-  for (int i = 0; i < 13; ++i)
-    bs[i] = v[i];
-  for (int i = 0; i < 13; ++i)
-    cout<<bs[i];
-  cout<<endl;
-  
+  //bitset must take a const length value
   bitset<8> b2('c');
-  for (int i = 0; i < 8; ++i)
+  for (int i = 7; i >= 0; --i)
     cout<<b2[i];
+  cout<<endl;
+
+  //boost dynamic size bitset
+  string str = "1101"; //string must be using only 1s and 0s
+  boost::dynamic_bitset<> bs(str);
+  for (boost::dynamic_bitset<>::size_type i = 0; i < bs.size(); ++i)
+    cout<<bs[i];
   cout<<endl;
 }
