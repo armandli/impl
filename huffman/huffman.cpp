@@ -6,6 +6,8 @@
 #include <bitset>
 #include <iostream>
 
+#include <cassert>
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 //huffman encoding implementation
@@ -17,11 +19,14 @@ struct treeNode {
   treeNode *lchild, *rchild;
   treeNode(treeNode* l, treeNode* r) : freq(l->freq + r->freq), lchild(l), rchild(r) {}
   treeNode(char v, int f) : val(v), freq(f), lchild(NULL), rchild(NULL) {}
-  ~treeNode(){ delete lchild; delete rchild; }
+  ~treeNode(){ 
+    if (lchild) delete lchild; 
+    if (rchild) delete rchild; 
+  }
 };
 
 struct priority_compare {
-  bool operator() (const treeNode* a, const treeNode* b){ return a->freq < b->freq; }
+  bool operator() (const treeNode* a, const treeNode* b){ return a->freq > b->freq; }
 };
 
 bool isLeaf(const treeNode* t) {
@@ -80,9 +85,7 @@ void compress(const std::string code, std::string& compressed){
   }
 }
 
-std::iostream& operator << (std::iostream& s, std::map<char, std::string> map){
-  for (std::map<char, std::string>::iterator it = map.begin(); it != map.end(); ++it)
-    s << "key = " << (*it).first << " val = " << (*it).second << std::endl;
+std::iostream& operator << (std::iostream& s, std::map<char, std::string> map){ for (std::map<char, std::string>::iterator it = map.begin(); it != map.end(); ++it) s << "key = " << (*it).first << " val = " << (*it).second << std::endl;
   return s;
 }
 
@@ -97,7 +100,7 @@ std::string huffman_compress(std::string str){
     treeNode* node = new treeNode((*iter).first, (*iter).second);
     q.push(node);
   }
-  //assert(q.size() > 0);
+  assert(q.size() > 0);
   //produce huffman tree out of the sorted priority queue
   while (q.size() != 1){
     treeNode* l = q.top(); q.pop();
@@ -105,6 +108,7 @@ std::string huffman_compress(std::string str){
     treeNode* t = new treeNode(l, r);
     q.push(t);
   }
+  assert(q.size() == 1);
   treeNode* root = q.top(); q.pop();
   //encode each charater in original string using huffman coding tree
   std::map<char, std::string> encoding_map;
@@ -119,6 +123,7 @@ std::string huffman_compress(std::string str){
   encodeTree(root, encoded_tree);
 
   std::cout << "encode tree = \n" << encoded_tree << std::endl;
+  std::cout << "encoded = \n" << encoded << std::endl;
 
   //write out the compressed string
   std::string compressed;
