@@ -17,9 +17,20 @@ int main(){
   for (int i = 7; i >= 0; --i)
     cout<<b2[i];
   cout<<endl;
+  cout << b2.to_string() << endl;
+  char k('\0');
+  for (int i = 0; i < 8; ++i)
+    k = b2.to_ulong();
+  cout << k << endl;
+
+  string str = "001001100010011100101111";
+  bitset<8> b3(str, 8, 16);
+  cout << b3.to_string() << endl;
+  k = b3.to_ulong();
+  cout << k << endl;
 
   //boost dynamic size bitset
-  string str = "1101"; //string must be using only 1s and 0s
+  str = "1101"; //string must be using only 1s and 0s
   boost::dynamic_bitset<> bs(str);
   for (boost::dynamic_bitset<>::size_type i = 0; i < bs.size(); ++i)
     cout<<bs[i];

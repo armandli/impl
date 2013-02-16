@@ -3,8 +3,10 @@
 #include <map>
 #include <vector>
 #include <utility>
-#include <boost/dynamic_bitset.hpp>
+#include <bitset>
+#include <iostream>
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 //huffman encoding implementation
 
@@ -43,7 +45,7 @@ void encode(const treeNode* root, std::map<char, std::string>& encoding){
       if (isLeaf(t)){
         encoding[t->val] = prefix;
         return;
-      }
+      }  
       (*this)(t->lchild, encoding, prefix + '0');
       (*this)(t->rchild, encoding, prefix + '1');
     }
@@ -52,6 +54,37 @@ void encode(const treeNode* root, std::map<char, std::string>& encoding){
   encoder(root, encoding);
 }
 
+void encodeTree(treeNode* root, std::string& encoded){
+  //observation: tree internal nodes always have 2 children
+  //we'll encode the tree from top down level by level, 0 means internal node, 1 means leaf,
+  //the 8 bits after a leaf is the encoded character
+  std::queue<treeNode*> q; q.push(root);
+  while (!q.empty()){
+    treeNode* node = q.front(); q.pop();
+    if (isLeaf(node)) {
+      encoded += "1";
+      std::bitset<8> bs(node->val);
+      encoded += bs.to_string();
+    } else {
+      encoded += "0";
+      q.push(node->lchild);
+      q.push(node->rchild);
+    }
+  }
+}
+
+void compress(const std::string code, std::string& compressed){
+  for (unsigned long i = 0; i < code.length(); i += 8){
+    std::bitset<8> bs(code, i, MIN(i+8,code.length()));
+    compressed += (char)bs.to_ulong();
+  }
+}
+
+std::iostream& operator << (std::iostream& s, std::map<char, std::string> map){
+  for (std::map<char, std::string>::iterator it = map.begin(); it != map.end(); ++it)
+    s << "key = " << (*it).first << " val = " << (*it).second << std::endl;
+  return s;
+}
 
 std::string huffman_compress(std::string str){
   //count the frequency of occurance of each character
@@ -82,8 +115,14 @@ std::string huffman_compress(std::string str){
   for (std::string::size_type i = 0; i < str.length(); ++i)
     encoded += encoding_map[str[i]];
   //produce a compressed tree
+  std::string encoded_tree;
+  encodeTree(root, encoded_tree);
+
+  std::cout << "encode tree = \n" << encoded_tree << std::endl;
+
   //write out the compressed string
   std::string compressed;
+  compress(encoded_tree + encoded, compressed);
  
   delete root;
   return compressed;
