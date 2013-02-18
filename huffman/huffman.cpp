@@ -4,6 +4,7 @@
 #include <vector>
 #include <utility>
 #include <bitset>
+#include <algorithm>
 #include <iostream>
 
 #ifdef DEBUG
@@ -39,7 +40,8 @@ struct priority_compare {
 };
 
 bool isLeaf(const treeNode* t) {
-  if (t->lchild == NULL && t->rchild == NULL) return true;
+  // all internal nodes must have 2 children
+  if (t->lchild == NULL || t->rchild == NULL) return true;
   return false;
 }
 
@@ -170,92 +172,147 @@ std::string huffman_compress(std::string str){
   return compressed;
 }
 
+// class help load only a portion of the compressed string data at any moment
+class CompressedFrame{
+#define BYTE 8
+  private:
+  const std::string _encoded;
+  unsigned long _index;
+  unsigned int _findex;
+  unsigned int _findexMax;
+  std::string _expanded;
+  bool loadNext(){
+    if (_index < _encoded.length() - 2) { // normal case
+      std::bitset<BYTE> bs(_encoded[_index]);
+      _expanded = bs.to_string();
+      _index++;
+      return true;
+    } else if (_index == _encoded.length() - 2){ //special case, need the mask to set _findexMax
+      std::bitset<BYTE> bs(_encoded[_encoded.length() - 2]);
+      std::bitset<BYTE> bmask(_encoded[_encoded.length() - 1]);
+      _expanded = bs.to_string();
+      std::string bmaskstr = bmask.to_string();
+      int ones = std::count(bmaskstr.begin(), bmaskstr.end(), '1'); 
+      _findexMax = ones;
+      _index = _encoded.length();
+      return true;
+    }
+    return false;
+  }
+  public:
+  explicit CompressedFrame(const std::string encoded) : _encoded(encoded), _index(0), _findex(0), _findexMax(BYTE) {
+    if (_encoded.length() < 3) { 
+      std::cerr << "String too short" << std::endl; 
+      _index = _encoded.length();
+      _findex = BYTE;
+    }
+    loadNext();
+  }
+  bool nextBit(char& c){
+    if (_findex == _findexMax) { 
+      if (loadNext()){
+        _findex = 0;
+        c = _expanded[_findex++];
+        return true;
+      }
+      return false;
+    } 
+    c = _expanded[_findex++];
+    return true;
+  }
+};
+
 char bitStringToChar(std::string str){
   std::bitset<8> bs(str);
   return (char) bs.to_ulong();
 }
 
-std::string huffman_decompress(std::string str){
-  // class help load only a portion of the compressed string data at any moment
-  class CompressedFrame{
-#define BYTE 8
-  private:
-    const std::string _encoded;
-    unsigned long _index;
-    unsigned long _findex;
-    std::string _expanded;
-    bool hasNext(){
-      //we don't load the mask at the end as content
-      if (_index < _encoded.length() - 1) return true;
-      return false;
-    }
-    bool loadNext(){
-      if (hasNext()) { 
-        std::bitset<BYTE> bs(_encoded[_index]);
-        _expanded = bs.to_string();
-        _index++;
-        return true;
-      } else {
-        //load the mask
-        std::bitset<BYTE> bs(_encoded[_encoded.length() - 1]);
-        _expanded = bs.to_string();
-        return false;
-      }
-    }
-  public:
-    explicit CompressedFrame(const std::string encoded) : _encoded(encoded), _index(0), _findex(0) {
-      loadNext();
-    }
-    bool nextBit(char& c){
-      if (_findex == BYTE) { 
-        if (loadNext()){
-          _findex = 0;
-          c = _expanded[_findex++];
-          return true;
-        }
-        return false;
-      } 
-      c = _expanded[_findex++];
-      return true;
-    }
-    std::string getFrame() { return _expanded; }
-  };
+bool decodeNext(treeNode* root, CompressedFrame& frames, char& c){
+  char k;
+  treeNode* node = root;
+  //special case, root is leaf
+  if (isLeaf(node)) { 
+    c = node->val;
+    return frames.nextBit(k);
+  }
+  while (!isLeaf(node)){
+    if (!frames.nextBit(k)) { std::cerr << "unexpected file ending" << std::endl; return false; }
+    if (k == '0')
+      node = node->lchild;
+    else 
+      node = node->rchild;
+  }
+  c = node->val;
+  return true;
+}
 
+std::string huffman_decompress(std::string str){
+  CompressedFrame frames(str);
+  char c;
 #ifdef DEBUG
   std::cout << "compressed string bits:\n";
   CompressedFrame printBits(str);
-  char c;
   while (printBits.nextBit(c)){
     std::cout<<c;
   }
-  std::string f = printBits.getFrame();
-  std::cout<<f;
   std::cout<<std::endl;
 #endif
-//  CompressedFrame frames(str);
-//  char c;
-//  // reconstruct the compression tree
-//  if (!frames.nextBit(c)) return "";
-//  treeNode* root;
-//  if (c == '1'){
-//    string val;
-//    for (int i = 0; i < BYTE; ++i){
-//      if (!nextBit(c)) return "";
-//      val += c;
-//    }
-//    c = bitStringToChar(val);
-//    root = new treeNode(c);
-//  } else {
-//    root = new treeNode();
-//    std::queue<treeNode*> q;
-//    q.push(root);
-//    while (!q.empty()){
-//      //TODO
-//    }
-//  }
+  // reconstruct the compression tree
+  if (!frames.nextBit(c)) { std::cerr << "unexpected file ending" << std::endl; return ""; }
+  treeNode* root;
+  if (c == '1'){
+    std::string val;
+    for (int i = 0; i < BYTE; ++i){
+      if (!frames.nextBit(c)) { std::cerr << "unexpected file ending" << std::endl; return ""; }
+      val += c;
+    }
+    c = bitStringToChar(val);
+    root = new treeNode(c);
+  } else {
+    root = new treeNode();
+    std::queue<treeNode*> q;
+    q.push(root);
+    while (!q.empty()){
+      treeNode* node = q.front(); q.pop();
+      if (!frames.nextBit(c)) { std::cerr << "unexpected file ending" << std::endl; return ""; }
+      if (c == '0') {
+        treeNode* l = new treeNode();
+        node->lchild = l;
+        q.push(l);
+      } else {
+        std::string val;
+        for (int i = 0; i < BYTE; ++i){
+          if (!frames.nextBit(c)) { std::cerr << "unexpected file ending" << std::endl; return ""; }
+          val += c;
+        }
+        c = bitStringToChar(val);
+        treeNode* l = new treeNode(c);
+        node->lchild = l;
+      }
+      if (!frames.nextBit(c)) { std::cerr << "unexpected file ending" << std::endl; return ""; }
+      if (c == '0') {
+        treeNode* r = new treeNode();
+        node->rchild = r;
+        q.push(r);
+      } else {
+        std::string val;
+        for (int i = 0; i < BYTE; ++i){
+          if (!frames.nextBit(c)) { std::cerr << "unexpected file ending" << std::endl; return ""; }
+          val += c;
+        }
+        c = bitStringToChar(val);
+        treeNode* r = new treeNode(c);
+        node->rchild = r;
+      }
+    }
+  }
+#ifdef DEBUG
+  //TODO: reconstruct compression map
+#endif
 
-  //TODO: read the rest of the string to decompress to the original data
- 
+  //read and reconstruct data
   std::string data;
+  while (decodeNext(root, frames, c))
+    data += c;
   return data;
 }

@@ -8,6 +8,7 @@ void test(string str, int id){
   string ret = huffman_compress(str);
   cout << "test" << id << " = " << str << "\ncompr = " << ret << endl;
   string uncompressed = huffman_decompress(ret);
+  cout << "uncompressed:\n" << uncompressed << std::endl;
 }
 
 int main(int argc, char* argv[]){
@@ -16,4 +17,5 @@ int main(int argc, char* argv[]){
   test("abcabcabcabc",3);
   test("aaabbbbb",4);
   test("aaaaaa",5);
+  test("a", 6);
 }
