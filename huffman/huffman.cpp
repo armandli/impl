@@ -25,8 +25,9 @@ struct treeNode {
   char val;
   unsigned long freq;
   treeNode *lchild, *rchild;
+  treeNode() : lchild(NULL), rchild(NULL), val('\0'), freq(0) {}
   treeNode(treeNode* l, treeNode* r) : freq(l->freq + r->freq), lchild(l), rchild(r) {}
-  treeNode(char v, int f) : val(v), freq(f), lchild(NULL), rchild(NULL) {}
+  treeNode(char v, int f = 0) : val(v), freq(f), lchild(NULL), rchild(NULL) {}
   ~treeNode(){ 
     if (lchild) delete lchild; 
     if (rchild) delete rchild; 
@@ -56,6 +57,9 @@ void encode(const treeNode* root, std::map<char, std::string>& encoding){
   struct converter{
     void operator () (const treeNode* t, std::map<char, std::string>& encoding, std::string prefix = ""){
       if (isLeaf(t)){
+        //boundary case, root is leaf
+        if (!prefix.length())
+          prefix = "1";
         encoding[t->val] = prefix;
         return;
       }  
@@ -166,48 +170,92 @@ std::string huffman_compress(std::string str){
   return compressed;
 }
 
-// class help load only a portion of the compressed string data at any moment
-class CompressedFrame{
-private:
-  const std::string _encoded;
-  unsigned long _index;
-  std::string _expanded;
-public:
-  explicit CompressedFrame(const std::string encoded) : _encoded(encoded), _index(0) {}
-  bool loadNext(){
-    if (_index < _encoded.length() - 1) { //we don't load the mask at the end as content
-      std::bitset<8> bs(_encoded[_index]);
-      _expanded = bs.to_string();
-      _index++;
-      return true;
-    } else {
-      //load the mask
-      std::bitset<8> bs(_encoded[_encoded.length() - 1]);
-      _expanded = bs.to_string();
-      return false;
-    }
-  }
-  std::string getFrame() { return _expanded; }
-};
+char bitStringToChar(std::string str){
+  std::bitset<8> bs(str);
+  return (char) bs.to_ulong();
+}
 
 std::string huffman_decompress(std::string str){
-#define READ_TREE 0
-#define READ_DATA 1
-  //TODO: read the compression tree
-  //TODO: read the rest of the string to decompress to the original data
+  // class help load only a portion of the compressed string data at any moment
+  class CompressedFrame{
+#define BYTE 8
+  private:
+    const std::string _encoded;
+    unsigned long _index;
+    unsigned long _findex;
+    std::string _expanded;
+    bool hasNext(){
+      //we don't load the mask at the end as content
+      if (_index < _encoded.length() - 1) return true;
+      return false;
+    }
+    bool loadNext(){
+      if (hasNext()) { 
+        std::bitset<BYTE> bs(_encoded[_index]);
+        _expanded = bs.to_string();
+        _index++;
+        return true;
+      } else {
+        //load the mask
+        std::bitset<BYTE> bs(_encoded[_encoded.length() - 1]);
+        _expanded = bs.to_string();
+        return false;
+      }
+    }
+  public:
+    explicit CompressedFrame(const std::string encoded) : _encoded(encoded), _index(0), _findex(0) {
+      loadNext();
+    }
+    bool nextBit(char& c){
+      if (_findex == BYTE) { 
+        if (loadNext()){
+          _findex = 0;
+          c = _expanded[_findex++];
+          return true;
+        }
+        return false;
+      } 
+      c = _expanded[_findex++];
+      return true;
+    }
+    std::string getFrame() { return _expanded; }
+  };
+
 #ifdef DEBUG
   std::cout << "compressed string bits:\n";
   CompressedFrame printBits(str);
-  while (printBits.loadNext()){
-    std::string f = printBits.getFrame();
-    std::cout<<f;
+  char c;
+  while (printBits.nextBit(c)){
+    std::cout<<c;
   }
   std::string f = printBits.getFrame();
   std::cout<<f;
   std::cout<<std::endl;
 #endif
-  CompressedFrame frame(str);
-  
+//  CompressedFrame frames(str);
+//  char c;
+//  // reconstruct the compression tree
+//  if (!frames.nextBit(c)) return "";
+//  treeNode* root;
+//  if (c == '1'){
+//    string val;
+//    for (int i = 0; i < BYTE; ++i){
+//      if (!nextBit(c)) return "";
+//      val += c;
+//    }
+//    c = bitStringToChar(val);
+//    root = new treeNode(c);
+//  } else {
+//    root = new treeNode();
+//    std::queue<treeNode*> q;
+//    q.push(root);
+//    while (!q.empty()){
+//      //TODO
+//    }
+//  }
+
+  //TODO: read the rest of the string to decompress to the original data
+ 
   std::string data;
   return data;
 }
