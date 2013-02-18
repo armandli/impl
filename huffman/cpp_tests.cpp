@@ -19,14 +19,29 @@ int main(){
   cout<<endl;
   cout << b2.to_string() << endl;
   char k('\0');
-  for (int i = 0; i < 8; ++i)
-    k = b2.to_ulong();
+  k = b2.to_ulong();
   cout << k << endl;
 
   string str = "001001100010011100101111";
   bitset<8> b3(str, 8, 16);
   cout << b3.to_string() << endl;
   k = b3.to_ulong();
+  cout << k << endl;
+
+  str = "0010";
+  bitset<8> b4(str);
+  cout << b4.to_string() << endl;
+  k = b4.to_ulong();
+  cout << k << endl;
+
+  union u {
+    char c[sizeof(unsigned long)];
+    unsigned long ul;
+  };
+  u uu; uu.c[0] = uu.c[1] = 'a'; uu.c[2] = uu.c[3] = 'b';
+  bitset<sizeof(unsigned long) * 8> b5(uu.ul);
+  cout << b5.to_string() << endl;
+  k = b5.to_ulong();
   cout << k << endl;
 
   //boost dynamic size bitset

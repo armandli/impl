@@ -6,7 +6,15 @@
 #include <bitset>
 #include <iostream>
 
+#ifdef DEBUG
 #include <cassert>
+#endif
+
+void massert(bool cond){
+#ifdef DEBUG
+  assert(cond);
+#endif
+}
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -79,15 +87,37 @@ void encodeTree(treeNode* root, std::string& encoded){
 }
 
 void compress(const std::string code, std::string& compressed){
-  for (unsigned long i = 0; i < code.length(); i += 8){
-    std::bitset<8> bs(code, i, MIN(i+8,code.length()));
+  for (unsigned long i = 0; i < code.length() / 8; ++i){
+    std::bitset<8> bs(code, i*8, (i*8)+8);
+    compressed += (char)bs.to_ulong();
+  }
+  //encode the last <8 bit code compressed string and append mask
+  int roundLength = code.length() % 8;
+  if (roundLength) {
+    std::string lastSegment = code.substr(code.length() - roundLength, roundLength);
+    std::string mask;
+    for (int i = 0; i < roundLength; ++i)
+      mask += '1';
+    for (int i = 0; i < 8 - roundLength; ++i) {
+      lastSegment += '0';
+      mask += '0';
+    }
+    std::bitset<8> bs(lastSegment);
+    compressed += (char)bs.to_ulong();
+    std::bitset<8> bmask(mask);
+    compressed += (char)bmask.to_ulong();
+  } else {
+    std::string mask = "11111111";
+    std::bitset<8> bs(mask); // the last byte is always a mask
     compressed += (char)bs.to_ulong();
   }
 }
 
+#ifdef DEBUG
 std::iostream& operator << (std::iostream& s, std::map<char, std::string> map){ for (std::map<char, std::string>::iterator it = map.begin(); it != map.end(); ++it) s << "key = " << (*it).first << " val = " << (*it).second << std::endl;
   return s;
 }
+#endif
 
 std::string huffman_compress(std::string str){
   //count the frequency of occurance of each character
@@ -100,7 +130,7 @@ std::string huffman_compress(std::string str){
     treeNode* node = new treeNode((*iter).first, (*iter).second);
     q.push(node);
   }
-  assert(q.size() > 0);
+  massert(q.size() > 0);
   //produce huffman tree out of the sorted priority queue
   while (q.size() != 1){
     treeNode* l = q.top(); q.pop();
@@ -108,7 +138,7 @@ std::string huffman_compress(std::string str){
     treeNode* t = new treeNode(l, r);
     q.push(t);
   }
-  assert(q.size() == 1);
+  massert(q.size() == 1);
   treeNode* root = q.top(); q.pop();
   //encode each charater in original string using huffman coding tree
   std::map<char, std::string> encoding_map;
@@ -122,20 +152,62 @@ std::string huffman_compress(std::string str){
   std::string encoded_tree;
   encodeTree(root, encoded_tree);
 
-  std::cout << "encode tree = \n" << encoded_tree << std::endl;
-  std::cout << "encoded = \n" << encoded << std::endl;
 
   //write out the compressed string
   std::string compressed;
   compress(encoded_tree + encoded, compressed);
- 
+
+#ifdef DEBUG
+  std::cout << "encode tree(" << encoded_tree.length() << ") = \n" << encoded_tree << std::endl;
+  std::cout << "encoded(" << encoded.length() << ") = \n" << encoded << std::endl;
+#endif
+
   delete root;
   return compressed;
 }
 
+// class help load only a portion of the compressed string data at any moment
+class CompressedFrame{
+private:
+  const std::string _encoded;
+  unsigned long _index;
+  std::string _expanded;
+public:
+  explicit CompressedFrame(const std::string encoded) : _encoded(encoded), _index(0) {}
+  bool loadNext(){
+    if (_index < _encoded.length() - 1) { //we don't load the mask at the end as content
+      std::bitset<8> bs(_encoded[_index]);
+      _expanded = bs.to_string();
+      _index++;
+      return true;
+    } else {
+      //load the mask
+      std::bitset<8> bs(_encoded[_encoded.length() - 1]);
+      _expanded = bs.to_string();
+      return false;
+    }
+  }
+  std::string getFrame() { return _expanded; }
+};
+
 std::string huffman_decompress(std::string str){
+#define READ_TREE 0
+#define READ_DATA 1
   //TODO: read the compression tree
   //TODO: read the rest of the string to decompress to the original data
+#ifdef DEBUG
+  std::cout << "compressed string bits:\n";
+  CompressedFrame printBits(str);
+  while (printBits.loadNext()){
+    std::string f = printBits.getFrame();
+    std::cout<<f;
+  }
+  std::string f = printBits.getFrame();
+  std::cout<<f;
+  std::cout<<std::endl;
+#endif
+  CompressedFrame frame(str);
+  
   std::string data;
   return data;
 }
