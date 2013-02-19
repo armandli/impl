@@ -120,7 +120,9 @@ void compress(const std::string code, std::string& compressed){
 }
 
 #ifdef DEBUG
-std::iostream& operator << (std::iostream& s, std::map<char, std::string> map){ for (std::map<char, std::string>::iterator it = map.begin(); it != map.end(); ++it) s << "key = " << (*it).first << " val = " << (*it).second << std::endl;
+std::ostream& operator << (std::ostream& s, const std::map<char, std::string>& map){ 
+  for (std::map<char, std::string>::const_iterator it = map.begin(); it != map.end(); ++it) 
+    s << "key = " << (*it).first << " val = " << (*it).second << std::endl;
   return s;
 }
 #endif
@@ -149,6 +151,9 @@ std::string huffman_compress(std::string str){
   //encode each charater in original string using huffman coding tree
   std::map<char, std::string> encoding_map;
   encode(root, encoding_map);
+#ifdef DEBUG
+  std::cout << encoding_map;
+#endif
   
   //convert input string into encoding string
   std::string encoded;

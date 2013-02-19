@@ -18,4 +18,5 @@ int main(int argc, char* argv[]){
   test("aaabbbbb",4);
   test("aaaaaa",5);
   test("a", 6);
+  test("baaccc", 7);
 }
