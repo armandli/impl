@@ -241,7 +241,7 @@ bool decodeNext(treeNode* root, CompressedFrame& frames, char& c){
     return frames.nextBit(k);
   }
   while (!isLeaf(node)){
-    if (!frames.nextBit(k)) { std::cerr << "unexpected file ending" << std::endl; return false; }
+    if (!frames.nextBit(k)) { return false; } //nothing to read
     if (k == '0')
       node = node->lchild;
     else 
