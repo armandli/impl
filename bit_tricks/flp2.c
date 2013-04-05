@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include "btricks.h"
 
 //finds the greatest power of 2 less and equal to x, found in Hacker's Delight
 //14 instructions, no loop
@@ -20,12 +20,4 @@ unsigned clp2(unsigned x){
   x = x | (x >> 8);
   x = x | (x >> 16);
   return x + 1;
-}
-
-int main(){
-  unsigned eight = flp2(8);
-  printf("8 = %u\n", eight);
-
-  unsigned seven = flp2(7);
-  printf("7 = %u\n", seven);
 }
