@@ -1,1 +1,3 @@
-unsigned gcd(unsigned a, unsigned b);
+#define UL unsigned long
+UL gcd(UL a, UL b);
+#undef UL
