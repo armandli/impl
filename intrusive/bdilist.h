@@ -1,17 +1,19 @@
-/* circular bidirectional intrusive list */
+/* Circular Bidirectional Intrusive List */
 #include <cassert>
 #include <cstddef>
 
-#ifndef __INTRUSIVE_LIST__ 
-#define __INTRUSIVE_LIST__
+//TODO: add the following:
+//  1) redesign iterators, and add reverse iterators
+//  2) add non-static member functions for BDIntrLst
 
-//TODO: define other iterators
+#ifndef __BIDIRECTIONAL_INTRUSIVE_LIST__
+#define __BIDIRECTIONAL_INTRUSIVE_LIST__
 
-template <class Node, int N> class IntrLstNode;
-template <class Node, int N> class IntrList;
-template <class Node, int N> class IntrLstFIter;
+template <class Node, int N> class BDIntrLstNd;
+template <class Node, int N> class BDIntrLst;
+template <class Node, int N> class BDIntrLstFIter;
 
-/** IntrLstNode
+/** BDIntrLstNd
  *    Usage:  sub-class this to become an intrusive list node type; a class can
  *            be part of multiple intrusive lists by using different N template
  *            parameter.
@@ -22,33 +24,33 @@ template <class Node, int N> class IntrLstFIter;
  *            list.
  */
 template <class Node, int N = 0>
-class IntrLstNode {
-  typedef IntrLstNode<Node, N> tLstNode;
-  typedef IntrLstFIter<Node, N> tLstFIter;
-  friend class IntrList<Node, N>;
-  friend class IntrLstFIter<Node, N>;
+class BDIntrLstNd {
+  typedef BDIntrLstNd<Node, N> tLstNd;
+  typedef BDIntrLstFIter<Node, N> tLstFIter;
+  friend class BDIntrLst<Node, N>;
+  friend class BDIntrLstFIter<Node, N>;
 
-  tLstNode* mNxt;
-  tLstNode* mPrv;
+  tLstNd* mNxt;
+  tLstNd* mPrv;
 public:
-  IntrLstNode() : mNxt(nullptr), mPrv(nullptr) {}
-  ~IntrLstNode(){ assert(mNxt == nullptr); }
+  BDIntrLstNd() : mNxt(nullptr), mPrv(nullptr) {}
+  ~BDIntrLstNd(){ assert(mNxt == nullptr); }
 };
 
 /** Intrusive List Forward Iterator
  */
 template <class Node, int N = 0>
-class IntrLstFIter {
-  typedef IntrLstNode<Node, N> tLstNode;
-  typedef IntrLstFIter<Node, N> tLstIter;
+class BDIntrLstFIter {
+  typedef BDIntrLstNd<Node, N> tLstNd;
+  typedef BDIntrLstFIter<Node, N> tLstIter;
 
-  tLstNode* mEnd;
-  tLstNode* mNxt;
+  tLstNd* mEnd;
+  tLstNd* mNxt;
 public:
   static tLstIter end(){ return tLstIter(); }
 
-  IntrLstFIter() : mEnd(nullptr), mNxt(nullptr) {}
-  IntrLstFIter(tLstNode& start, size_t steps = 0){
+  BDIntrLstFIter() : mEnd(nullptr), mNxt(nullptr) {}
+  BDIntrLstFIter(tLstNd& start, size_t steps = 0){
     if (start.mNxt == nullptr){
       mEnd = mNxt = nullptr;
       return;
@@ -62,7 +64,7 @@ public:
       mNxt = mNxt->mNxt;
     }
   }
-  IntrLstFIter(const tLstIter& other) : mEnd(other.mEnd), mNxt(other.mNxt) {}
+  BDIntrLstFIter(const tLstIter& other) : mEnd(other.mEnd), mNxt(other.mNxt) {}
   tLstIter& operator=(const tLstIter& other){
     mEnd = other.mEnd;
     mNxt = other.mNxt;
@@ -78,7 +80,7 @@ public:
     assert(mNxt != nullptr);
     if (mNxt->mNxt == mEnd)
       mNxt = mEnd = nullptr;
-    else 
+    else
       mNxt = mNxt->mNxt;
     return *this;
   }
@@ -101,57 +103,55 @@ public:
  *    information on the list - providing a separation between data and
  *    operation, allowing subclass of intrusive list node not having to
  *    override functionalities by accident.
- *  Note: because the list class does not have any meta information, we 
+ *  Note: because the list class does not have any meta information, we
  *  currently cannot use for each loop on intrusive list nodes
  *
  *  Interface operations:
- *    length: obtain the number of nodes connected
- *    create_list: create a list of 1 element from a node
- *    release: release a node from a list, node not deallocated
- *    release_all: release all nodes from a list, node not deallocated
- *    remove: release and delete a node from a list
- *    remove_all: release and delete all nodes from a list
- *    insert_before: put node 'insertNode' before node 'lstNode', forming a list
- *    insert_after: put node 'insertNode' after node 'lstNode, forming a list
+ *    length:        obtain the number of nodes connected
+ *    create_list:   create a list of 1 element from a node
+ *    release:       release a node from a list, node not deallocated
+ *    release_all:   release all nodes from a list, node not deallocated
+ *    remove:        release and delete a node from a list
+ *    remove_all:    release and delete all nodes from a list
+ *    insert_before: put node 'insertNd' before node 'lstNd', forming a list
+ *    insert_after:  put node 'insertNd' after node 'lstNd, forming a list
  */
 template <class Node, int N = 0>
-class IntrList {
-  typedef IntrLstNode<Node, N> tLstNode;
+class BDIntrLst {
+  typedef BDIntrLstNd<Node, N> tLstNd;
 public:
-  static size_t length(tLstNode& start){
+  static size_t length(tLstNd& start){
     if (start.mNxt == nullptr) return 0;
     size_t count = 1;
-    tLstNode* begin = &start;
-    tLstNode* next = start.mNxt;
-    for (tLstNode* begin = &start, *next = start.mNxt;
+    for (tLstNd* begin = &start, *next = start.mNxt;
          next != begin;
          next = next->mNxt, ++count);
     return count;
   }
-  static void create_list(tLstNode& root){
+  static void create_list(tLstNd& root){
     if (root.mNxt != nullptr){
       root.mPrv->mNxt = root.mNxt;
       root.mNxt->mPrv = root.mPrv;
     }
     root.mNxt = root.mPrv = &root;
   }
-  static void release(tLstNode& node){
+  static void release(tLstNd& node){
     if (node.mNxt == nullptr) return;
     node.mPrv->mNxt = node.mNxt;
     node.mNxt->mPrv = node.mPrv;
     node.mPrv = node.mNxt = nullptr;
   }
-  static void release_all(tLstNode& node){
+  static void release_all(tLstNd& node){
     if (node.mNxt == nullptr) return;
-    tLstNode* cur = node.mNxt;
-    tLstNode* prv = &node;
+    tLstNd* cur = node.mNxt;
+    tLstNd* prv = &node;
     do {
       prv->mPrv = prv->mNxt = nullptr;
       prv = cur;
       cur = cur->mNxt;
     } while (cur);
   }
-  static void remove(tLstNode& node){
+  static void remove(tLstNd& node){
     if (node.mNxt == nullptr){
       delete &node;
       return;
@@ -161,14 +161,15 @@ public:
     node.mPrv = node.mNxt = nullptr;
     delete &node;
   }
-  static void remove_all(tLstNode& node){
+  static void remove_all(tLstNd& node){
     if (node.mNxt == nullptr){
       delete &node;
       return;
     }
+    //TODO: this is bad implementation; you're assuming the ptr after deletion is not reallocated immediately
     node.mPrv->mNxt = nullptr;
-    tLstNode* ptr = node.mNxt;
-    tLstNode* prv = ptr;
+    tLstNd* ptr = node.mNxt;
+    tLstNd* prv = ptr;
     do {
       ptr->mPrv->mPrv = ptr->mPrv->mNxt = nullptr;
       delete ptr->mPrv;
@@ -177,30 +178,32 @@ public:
     } while (ptr);
     delete prv;
   }
-  static void insert_before(tLstNode& lstNode, tLstNode& insertNode){
-    release(insertNode);
-    if (lstNode.mNxt == nullptr){
-      insertNode.mNxt = insertNode.mPrv = &lstNode;
-      lstNode.mPrv = lstNode.mNxt = &insertNode;
+  static void insert_before(tLstNd& lstNd, tLstNd& insertNd){
+    release(insertNd);
+    //TODO: may not need the if
+    if (lstNd.mNxt == nullptr){
+      insertNd.mNxt = insertNd.mPrv = &lstNd;
+      lstNd.mPrv = lstNd.mNxt = &insertNd;
     } else {
-      lstNode.mPrv->mNxt = &insertNode;
-      insertNode.mPrv = lstNode.mPrv;
-      lstNode.mPrv = &insertNode;
-      insertNode.mNxt = &lstNode;
+      lstNd.mPrv->mNxt = &insertNd;
+      insertNd.mPrv = lstNd.mPrv;
+      lstNd.mPrv = &insertNd;
+      insertNd.mNxt = &lstNd;
     }
   }
-  static void insert_after(tLstNode& lstNode, tLstNode& insertNode){
-    release(insertNode);
-    if (lstNode.mNxt == nullptr){
-      insertNode.mNxt = insertNode.mPrv = &lstNode;
-      lstNode.mNxt = lstNode.mPrv = &insertNode;
+  static void insert_after(tLstNd& lstNd, tLstNd& insertNd){
+    release(insertNd);
+    //TODO: may not need the if
+    if (lstNd.mNxt == nullptr){
+      insertNd.mNxt = insertNd.mPrv = &lstNd;
+      lstNd.mNxt = lstNd.mPrv = &insertNd;
     } else {
-      insertNode.mPrv = &lstNode;
-      insertNode.mNxt = lstNode.mNxt;
-      lstNode.mNxt->mPrv = &insertNode;
-      lstNode.mNxt = &insertNode;
+      insertNd.mPrv = &lstNd;
+      insertNd.mNxt = lstNd.mNxt;
+      lstNd.mNxt->mPrv = &insertNd;
+      lstNd.mNxt = &insertNd;
     }
   }
 };
 
-#endif //__INTRUSIVE_LIST__
+#endif //__BIDIRECTIONAL_INTRUSIVE_LIST__
