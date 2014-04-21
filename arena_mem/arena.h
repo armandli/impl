@@ -59,7 +59,11 @@ public:
 // placement new implementations
 void* operator new(size_t, Arena&);
 void* operator new(size_t, Arena*);
-inline void  operator delete(void*, Arena&){} //do nothing
-inline void  operator delete(void*, Arena*){} //do nothing
+void* operator new[](size_t, Arena&);
+void* operator new[](size_t, Arena*);
+inline void operator delete(void*, Arena&){}   //do nothing
+inline void operator delete(void*, Arena*){}   //do nothing
+inline void operator delete[](void*, Arena&){} //do nothing
+inline void operator delete[](void*, Arena*){} //do nothing
 //void* operator new[](size_t size, Arena& arena);
 //void operator delete[](void* p, Arena& arena);

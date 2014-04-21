@@ -16,13 +16,13 @@ struct Arena::MmryBlk : UDIntrLstNd<Arena::MmryBlk> {
 
 size_t Arena::alignedSize(size_t sz){
   //raise size to minimal 4 byte aligned value
-  return (sz & ((size_t)-1 ^ 3)) + (sz & 2 << 1 | sz & 1 << 2);
+  return (sz & ((size_t)-1 ^ 3)) + ((sz & 2) << 1 | (sz & 1) << 2);
 }
 
 size_t Arena::alignedAddr(size_t addr, size_t sz){
   //assume addr is already 4 byte aligned, and sz is 4 or 8 byte aligned
   if (sz & 4) return  addr;
-  else        return (addr & ((size_t)-1 ^ 7)) + (addr & 4 << 1);
+  else        return (addr & ((size_t)-1 ^ 7)) + ((addr & 4) << 1);
 }
 
 void Arena::allocBlk(size_t blksz){
@@ -54,7 +54,7 @@ void* Arena::alloc(size_t sz){
   size_t rsz = MAX(sz, 4); //minimal allocating size assumption
   if (!mCurBlk || !isContainable(rsz))
     allocBlk(MAX(BLK_SZ, alignedSize(rsz) + sizeof(MmryBlk)));
-  return allocObj(sz);
+  return allocObj(rsz);
 }
 
 void Arena::freeBlks(){ BlockList::remove(mCurBlk); }
@@ -67,6 +67,13 @@ void* operator new(size_t sz, Arena& arena){
   return arena.alloc(sz);
 }
 void* operator new(size_t sz, Arena* arena){
+  assert(arena != nullptr);
+  return arena->alloc(sz);
+}
+void* operator new[](size_t sz, Arena& arena){
+  return arena.alloc(sz);
+}
+void* operator new[](size_t sz, Arena* arena){
   assert(arena != nullptr);
   return arena->alloc(sz);
 }
