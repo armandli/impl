@@ -63,7 +63,7 @@ public:
   UDIntrLstCItr() : mEnd(nullptr), mCur(nullptr) {}
   UDIntrLstCItr(const tLstNd& start, size_t steps = 0){ init(&start, steps); }
   UDIntrLstCItr(const tLstNd* start, size_t steps = 0){ init(start, steps); }
-  UDIntrLstCItr(const tLstItr& other) : mEnd(other.mEnd), mCur(other.mNxt) {}
+  UDIntrLstCItr(const tLstItr& other) : mEnd(other.mEnd), mCur(other.mCur) {}
   tLstItr& operator=(const tLstItr& other){
     mEnd = other.mEnd;
     mCur = other.mCur;
@@ -138,7 +138,7 @@ class UDIntrLst {
   typedef UDIntrLstNd<Node, N> tLstNd;
   typedef UDIntrLst<Node, N> tLst;
 
-  const tLstNd* mRoot;
+  tLstNd* mRoot;
 public:
   typedef UDIntrLstItr<Node, N> iterator;
   typedef UDIntrLstCItr<Node, N> const_iterator;
@@ -147,7 +147,7 @@ public:
   static size_t length(const tLstNd& start){
     if (start.mNxt == nullptr) return 0;
     size_t count = 1;
-    for (tLstNd* begin = &start, *next = start.mNxt;
+    for (const tLstNd* begin = &start, *next = start.mNxt;
          next != begin;
          next = next->mNxt, ++count);
     return count;
@@ -174,17 +174,17 @@ public:
   static void release(tLstNd* root){ if (!root) return; release(*root); }
   static void remove(tLstNd& root){
     if (root.mNxt == nullptr){
-      delete &root;
+      delete static_cast<Node*>(&root);
       return;
     }
     tLstNd* cur = root.mNxt;
     tLstNd* prv = &root;
     for (; cur != &root; prv = cur, cur = cur->mNxt){
       prv->mNxt = nullptr;
-      delete prv;
+      delete static_cast<Node*>(prv);
     }
-    cur->mNxt = nullptr;
-    delete cur;
+    prv->mNxt = nullptr;
+    delete static_cast<Node*>(prv);
   }
   static void remove(tLstNd* root){ if (!root) return; remove(*root); }
   static void insert(tLstNd& lstNd, tLstNd& insertNd){
@@ -205,14 +205,16 @@ public:
 
   /* Object instance way of using Intrusive List */
   UDIntrLst() : mRoot(nullptr) {}
-  UDIntrLst(tLstNd& node) : mRoot(&node) {}
-  UDIntrLst(tLstNd* node) : mRoot(node) {}
+  UDIntrLst(tLstNd& node) : mRoot(&node) {
+    assert(mRoot);
+    if (!mRoot->mNxt) create(*mRoot);
+  }
+  UDIntrLst(tLstNd* node) : UDIntrLst(*node) {}
   UDIntrLst(const tLst& other) : mRoot(other.mRoot) {}
   tLst& operator=(const tLst& other){ mRoot = other.mRoot; return *this; }
   ~UDIntrLst(){}
 
   size_t length(){ assert(mRoot); return length(*mRoot); }
-  void create(){ assert(mRoot); create(*mRoot); }
   void release(){ assert(mRoot); release(*mRoot); }
   void remove(){ assert(mRoot); remove(*mRoot); mRoot = nullptr; }
   void insert(tLstNd& insertNd){ assert(mRoot); insert(*mRoot, insertNd); }

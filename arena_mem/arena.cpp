@@ -1,14 +1,17 @@
+#include <new>
 #include "arena.h"
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
-
-extern "C++" void* operator new(size_t, void*) throw();
 
 struct Arena::MmryBlk : UDIntrLstNd<Arena::MmryBlk> {
   size_t mBlkSz;
 
   MmryBlk(size_t sz) : mBlkSz(sz) {}
   ~MmryBlk(){}
+
+  //make sure we cannot copy memory blocks
+  MmryBlk(const MmryBlk&) = delete;
+  MmryBlk& operator=(const MmryBlk&) = delete;
 };
 
 size_t Arena::alignedSize(size_t sz){
@@ -26,17 +29,14 @@ void Arena::allocBlk(size_t blksz){
   size_t alloc_sz = MAX(blksz, MIN_BLK_SZ);
   void* nb = new char[alloc_sz];
   MmryBlk* pblk = new (nb) MmryBlk(alloc_sz);
-  if (mCurBlk)
-    BlockList::insert(mCurBlk, pblk);
-  else {
-    mCurBlk = pblk;
-    BlockList::create(pblk);
-  }
+  if (mCurBlk) BlockList::insert(mCurBlk, pblk);
+  else         BlockList::create(pblk);
+  mCurBlk = pblk;
   mBlkNxt = sizeof(MmryBlk);
 }
 
 bool Arena::isContainable(size_t sz){
-  assert(mBlkNxt != 0);
+  assert(mBlkNxt);
   size_t asz = alignedSize(sz);
   size_t nxt = alignedAddr((size_t)mCurBlk + mBlkNxt, asz) - (size_t)mCurBlk;
   if (mCurBlk->mBlkSz - nxt >= asz) return true;

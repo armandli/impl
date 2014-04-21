@@ -24,6 +24,7 @@
 //   just plain not going to call destructor and assume safe, and then the other one is versatile, but require user manual
 //   registration
 //10) beware of alignment, it's serious and real
+//11) add performance tuning reports
 
 //barebone arena implementation
 class Arena {
