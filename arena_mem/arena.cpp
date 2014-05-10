@@ -57,11 +57,25 @@ void* Arena::alloc(size_t sz){
   return allocObj(rsz);
 }
 
-void Arena::freeBlks(){ BlockList::remove(mCurBlk); }
+void Arena::freeBlks(){
+  BlockList::destroy(
+    mCurBlk, 
+    [](MmryBlk* blk){ blk->~MmryBlk(); delete[] (char*) blk; }
+  );
+}
 
-Arena::Arena() : mCurBlk(nullptr), mBlkNxt(0) {}
-Arena::~Arena(){ freeBlks(); }
-Arena::Arena(size_t sz) : mCurBlk(nullptr) { allocBlk(sz); }
+void Arena::makeDtorCalls(){
+  if (mCurDtorRcd){
+    DtorList list(mCurDtorRcd);
+    for (auto& rec : list) rec.dtorCall();
+  }
+}
+
+Arena::Arena() : mCurBlk(nullptr), mBlkNxt(0), mCurDtorRcd(nullptr) {}
+Arena::~Arena(){ makeDtorCalls(); freeBlks(); }
+Arena::Arena(size_t sz) : mCurBlk(nullptr), mCurDtorRcd(nullptr) {
+  allocBlk(sz);
+}
 
 void* operator new(size_t sz, Arena& arena){
   return arena.alloc(sz);

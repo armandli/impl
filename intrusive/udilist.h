@@ -22,8 +22,7 @@ template <class Node, int N> class UDIntrLstItr;  //iterator
  */
 template <class Node, int N = 0>
 class UDIntrLstNd {
-  typedef UDIntrLstNd<Node, N> tLstNd;
-  typedef UDIntrLstCItr<Node, N> tLstIter;
+  using tLstNd   = UDIntrLstNd<Node, N>;
   friend class UDIntrLst<Node, N>;
   friend class UDIntrLstCItr<Node, N>;
 
@@ -37,8 +36,8 @@ public:
  */
 template <class Node, int N = 0>
 class UDIntrLstCItr {
-  typedef UDIntrLstNd<Node, N> tLstNd;
-  typedef UDIntrLstCItr<Node, N> tLstItr;
+  using tLstNd  = UDIntrLstNd<Node, N>;
+  using tLstItr = UDIntrLstCItr<Node, N>;
 
   const tLstNd* mEnd;
   const tLstNd* mCur;
@@ -93,8 +92,8 @@ public:
  */
 template <class Node, int N = 0>
 class UDIntrLstItr {
-  typedef UDIntrLstNd<Node, N> tLstNd;
-  typedef UDIntrLstItr<Node, N> tLstItr;
+  using tLstNd  = UDIntrLstNd<Node, N>;
+  using tLstItr = UDIntrLstItr<Node, N>;
 
   UDIntrLstCItr<Node, N> mItr;
 public:
@@ -123,28 +122,30 @@ public:
  *         which will be used as root node for the lifetime of this object
  *
  *  Interface operations:
- *    length:  obtain the number of nodes connected
+ *    size:    obtain the number of nodes connected
  *    create:  create a list of 1 element from a node
  *    release: release all nodes from a list, node not deallocated
- *    remove:  release and delete all nodes from a list
+ *    destroy: release and delete all nodes from list, may supply custom
+ *             destructor function
  *    insert:  put node 'insertNd' after node 'lstNd, forming a list
  *    begin:   return an iterator object starting from its given param
  *    cbegin:  return a const iterator object starting from its given param
  *    end:     return the end iterator
  *    cend:    return the const end iterator
+ *    setRoot: only available in object instance mode, set root of list
  */
 template <class Node, int N = 0>
 class UDIntrLst {
-  typedef UDIntrLstNd<Node, N> tLstNd;
-  typedef UDIntrLst<Node, N> tLst;
+  using tLstNd = UDIntrLstNd<Node, N>;
+  using tLst   = UDIntrLst<Node, N>;
 
   tLstNd* mRoot;
 public:
-  typedef UDIntrLstItr<Node, N> iterator;
-  typedef UDIntrLstCItr<Node, N> const_iterator;
+  using iterator       = UDIntrLstItr<Node, N>;
+  using const_iterator = UDIntrLstCItr<Node, N>;
 
   /* static way of using Intrusive List Methods */
-  static size_t length(const tLstNd& start){
+  static size_t size(const tLstNd& start){
     if (start.mNxt == nullptr) return 0;
     size_t count = 1;
     for (const tLstNd* begin = &start, *next = start.mNxt;
@@ -152,9 +153,9 @@ public:
          next = next->mNxt, ++count);
     return count;
   }
-  static size_t length(const tLstNd* start){
+  static size_t size(const tLstNd* start){
     if (!start) return 0;
-    return length(*start);
+    return size(*start);
   }
   static void create(tLstNd& root){
     assert(root.mNxt == nullptr);
@@ -172,21 +173,29 @@ public:
     } while (cur);
   }
   static void release(tLstNd* root){ if (!root) return; release(*root); }
-  static void remove(tLstNd& root){
+  template <class Func>
+  static void destroy(tLstNd& root, Func dtorFn){
     if (root.mNxt == nullptr){
-      delete static_cast<Node*>(&root);
+      dtorFn(static_cast<Node*>(&root));
       return;
     }
     tLstNd* cur = root.mNxt;
     tLstNd* prv = &root;
     for (; cur != &root; prv = cur, cur = cur->mNxt){
       prv->mNxt = nullptr;
-      delete static_cast<Node*>(prv);
+      dtorFn(static_cast<Node*>(prv));
     }
     prv->mNxt = nullptr;
-    delete static_cast<Node*>(prv);
+    dtorFn(static_cast<Node*>(prv));
   }
-  static void remove(tLstNd* root){ if (!root) return; remove(*root); }
+  template <class Func>
+  static void destroy(tLstNd* root, Func dtorFn){
+    if (!root) return; destroy<Func>(*root, dtorFn);
+  }
+  static void destroy(tLstNd& root){
+    destroy(root, [](Node* n){ delete n; });
+  }
+  static void destroy(tLstNd* root){ if (!root) return; destroy(*root); }
   static void insert(tLstNd& lstNd, tLstNd& insertNd){
     assert(insertNd.mNxt == nullptr);
     insertNd.mNxt = lstNd.mNxt;
@@ -214,9 +223,23 @@ public:
   tLst& operator=(const tLst& other){ mRoot = other.mRoot; return *this; }
   ~UDIntrLst(){}
 
-  size_t length(){ assert(mRoot); return length(*mRoot); }
+  void setRoot(tLstNd& r){
+    mRoot = &r;
+    if (!mRoot->mNxt) create(*mRoot);
+  }
+  void setRoot(tLstNd* r){
+    mRoot = r;
+    if (r) setRoot(*r);
+  }
+  size_t size(){ assert(mRoot); return size(*mRoot); }
   void release(){ assert(mRoot); release(*mRoot); }
-  void remove(){ assert(mRoot); remove(*mRoot); mRoot = nullptr; }
+  template <class Func>
+  void destroy(Func dtorFn){
+    assert(mRoot);
+    destroy(*mRoot, dtorFn);
+    mRoot = nullptr;
+  }
+  void destroy(){ destroy([](Node* n){ delete n; }); }
   void insert(tLstNd& insertNd){ assert(mRoot); insert(*mRoot, insertNd); }
   void insert(tLstNd* insertNd){ assert(mRoot); insert(*mRoot, *insertNd); }
   iterator begin(){ assert(mRoot); return begin(*mRoot); }

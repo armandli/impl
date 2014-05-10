@@ -20,11 +20,22 @@
 //8) destructor registration:
 //     arena.DTOR(c);    //destructor register for allocated c object
 //     arena.DTOR(c, n); //destructor register for allocated c array object
-//9) now thinking about it, it's better to have 3 kinds of arena allocators, one automatically register destructors, another
-//   just plain not going to call destructor and assume safe, and then the other one is versatile, but require user manual
-//   registration
-//10) beware of alignment, it's serious and real
-//11) add performance tuning reports
+//9) beware of alignment, it's serious and real
+//10) add performance tuning reports
+
+//TODO: take care of destructor call order, and memory block release order
+
+class Arena;
+
+// placement new implementations
+void* operator new(size_t, Arena&);
+void* operator new(size_t, Arena*);
+void* operator new[](size_t, Arena&);
+void* operator new[](size_t, Arena*);
+inline void operator delete(void*, Arena&){}   //do nothing
+inline void operator delete(void*, Arena*){}   //do nothing
+inline void operator delete[](void*, Arena&){} //do nothing
+inline void operator delete[](void*, Arena*){} //do nothing
 
 //barebone arena implementation
 class Arena {
@@ -37,33 +48,56 @@ class Arena {
   inline static size_t alignedAddr(size_t addr, size_t sz);
 
   struct MmryBlk;  //memory block struct
-
-  typedef UDIntrLst<MmryBlk> BlockList;
-
-  MmryBlk* mCurBlk; //the current memory block used for memory allocation
-  size_t mBlkNxt;   //offset in the current memory block for next allocation
+  using BlockList = UDIntrLst<MmryBlk>;
 
   void allocBlk(size_t);
   void freeBlks();
   bool isContainable(size_t);
   void* allocObj(size_t);
+
+  //destructor call record
+  using DtorFnPtrTy = void (*)(void*, size_t);
+  template <class T>
+  static void DtorFn(void* ptr, size_t cnt){
+    T* it = (T*)ptr + cnt - 1;
+    for (size_t i = cnt; i > 0; --i, --it) it->~T();
+  }
+
+  //destructor call record struct
+  struct DtorRcd : UDIntrLstNd<Arena::DtorRcd> {
+    void* mPtr;
+    size_t mCnt;
+    DtorFnPtrTy mDtorFn;
+  
+    DtorRcd(void* ptr, size_t cnt, DtorFnPtrTy dtor) :
+      mPtr(ptr), mCnt(cnt), mDtorFn(dtor) {}
+    ~DtorRcd(){}
+  
+    void dtorCall(){ mDtorFn(mPtr, mCnt); }
+  
+    DtorRcd(const DtorRcd&) = delete;
+    DtorRcd& operator=(const DtorRcd&) = delete;
+  };
+  using DtorList = UDIntrLst<DtorRcd>;
+
+  void makeDtorCalls();
+
+  MmryBlk* mCurBlk;     //the current memory block used for memory allocation
+  size_t mBlkNxt;       //offset in the current memory block for next allocation
+  DtorRcd* mCurDtorRcd; //last registered destructor call record
+
 public:
   Arena();       //arena without allocating any memory block
   Arena(size_t); //arena with first block allocated with size on heap
   ~Arena();
 
   void* alloc(size_t);
+
+  template <class T>
+  void regDtor(T* ptr, size_t cnt){
+    DtorRcd* rec = new (*this) DtorRcd(ptr, cnt, &DtorFn<T>);
+    if (!mCurDtorRcd) DtorList::create(rec);
+    else              DtorList::insert(mCurDtorRcd, rec);
+    mCurDtorRcd = rec;
+  }
 };
-
-
-// placement new implementations
-void* operator new(size_t, Arena&);
-void* operator new(size_t, Arena*);
-void* operator new[](size_t, Arena&);
-void* operator new[](size_t, Arena*);
-inline void operator delete(void*, Arena&){}   //do nothing
-inline void operator delete(void*, Arena*){}   //do nothing
-inline void operator delete[](void*, Arena&){} //do nothing
-inline void operator delete[](void*, Arena*){} //do nothing
-//void* operator new[](size_t size, Arena& arena);
-//void operator delete[](void* p, Arena& arena);
