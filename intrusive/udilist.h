@@ -127,8 +127,9 @@ public:
  *    release: release all nodes from a list, node not deallocated
  *    destroy: release and delete all nodes from list, may supply custom
  *             destructor function
- *    insert:  put node nb after node na, forming a list
- *    merge:   merge list nb after list na
+ *    insert:  put node nb after node na, assume nb does not belong to a list
+ *             larger than size 1, and na is a list
+ *    merge:   merge list nb after list na; assume both na and nb are lists
  *    begin:   return an iterator object starting from its given param
  *    cbegin:  return a const iterator object starting from its given param
  *    end:     return the end iterator
@@ -198,24 +199,15 @@ public:
   }
   static void destroy(tLstNd* root){ if (!root) return; destroy(*root); }
   static void insert(tLstNd& na, tLstNd& nb){
-    //in order to keep the operation O(1), we assume one of the node is
-    //currently a list of itself, or not in any lists
-    assert(nb.mNxt == nullptr || nb.mNxt == &nb ||
-           na.mNxt == nullptr || na.mNxt == &na);
-    tLstNd* rst = (!nb.mNxt || nb.mNxt == &nb) ? na.mNxt : nb.mNxt;
-    rst = rst ? rst : &na;
-    nb.mNxt = rst;
+    assert(na.mNxt && (nb.mNxt == nullptr || nb.mNxt == &nb));
+    nb.mNxt = na.mNxt;
     na.mNxt = &nb;
   }
   static void insert(tLstNd* na, tLstNd* nb){
     if (!na || !nb) return; insert(*na, *nb);
   }
   static void merge(tLstNd& na, tLstNd& nb){
-    if (nb.mNxt == nullptr || nb.mNxt == &nb ||
-        na.mNxt == nullptr || na.mNxt == &na){
-      insert(na, nb);
-      return;
-    }
+    assert(na.mNxt && nb.mNxt);
     tLstNd* lnk = &na, * end = &nb;
     for (; lnk->mNxt != &na; lnk = lnk->mNxt);
     for (; end->mNxt != &nb; end = end->mNxt);

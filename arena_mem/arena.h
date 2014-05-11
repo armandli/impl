@@ -80,9 +80,11 @@ class Arena {
 
   void makeDtorCalls();
 
+  MmryBlk* mFstBlk;     //the first memory allocation block
   MmryBlk* mCurBlk;     //the current memory block used for memory allocation
   size_t mBlkNxt;       //offset in the current memory block for next allocation
-  DtorRcd* mCurDtorRcd; //last registered destructor call record
+  DtorRcd* mFstDtorRcd; //the first registered destructor call record
+  DtorRcd* mCurDtorRcd; //the last registered destructor call record
 
 public:
   Arena();       //arena without allocating any memory block
@@ -94,8 +96,12 @@ public:
   template <class T>
   void regDtor(T* ptr, size_t cnt){
     DtorRcd* rec = new (*this) DtorRcd(ptr, cnt, &DtorFn<T>);
-    if (mCurDtorRcd) DtorList::insert(rec, mCurDtorRcd);
-    else             DtorList::create(rec);
+    if (mCurDtorRcd)
+      DtorList::insert(mFstDtorRcd, rec);
+    else {
+      DtorList::create(rec);
+      mFstDtorRcd = rec;
+    }
     mCurDtorRcd = rec;
   }
 };

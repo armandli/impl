@@ -29,8 +29,12 @@ void Arena::allocBlk(size_t blksz){
   size_t alloc_sz = MAX(blksz, MIN_BLK_SZ);
   void* nb = ::new char[alloc_sz];
   MmryBlk* pblk = ::new (nb) MmryBlk(alloc_sz);
-  if (mCurBlk) BlockList::insert(pblk, mCurBlk);
-  else         BlockList::create(pblk);
+  if (mCurBlk)
+    BlockList::insert(mFstBlk, pblk);
+  else {
+    BlockList::create(pblk);
+    mFstBlk = pblk;
+  }
   mCurBlk = pblk;
   mBlkNxt = sizeof(MmryBlk);
 }
@@ -71,9 +75,9 @@ void Arena::makeDtorCalls(){
   }
 }
 
-Arena::Arena() : mCurBlk(nullptr), mBlkNxt(0), mCurDtorRcd(nullptr) {}
+Arena::Arena() : mFstBlk(nullptr), mCurBlk(nullptr), mBlkNxt(0), mFstDtorRcd(nullptr), mCurDtorRcd(nullptr) {}
 Arena::~Arena(){ makeDtorCalls(); freeBlks(); }
-Arena::Arena(size_t sz) : mCurBlk(nullptr), mCurDtorRcd(nullptr) {
+Arena::Arena(size_t sz) : Arena() {
   allocBlk(sz);
 }
 
