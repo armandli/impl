@@ -27,9 +27,9 @@ size_t Arena::alignedAddr(size_t addr, size_t sz){
 
 void Arena::allocBlk(size_t blksz){
   size_t alloc_sz = MAX(blksz, MIN_BLK_SZ);
-  void* nb = new char[alloc_sz];
-  MmryBlk* pblk = new (nb) MmryBlk(alloc_sz);
-  if (mCurBlk) BlockList::insert(mCurBlk, pblk);
+  void* nb = ::new char[alloc_sz];
+  MmryBlk* pblk = ::new (nb) MmryBlk(alloc_sz);
+  if (mCurBlk) BlockList::insert(pblk, mCurBlk);
   else         BlockList::create(pblk);
   mCurBlk = pblk;
   mBlkNxt = sizeof(MmryBlk);

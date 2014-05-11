@@ -22,7 +22,7 @@ template <class Node, int N> class UDIntrLstItr;  //iterator
  */
 template <class Node, int N = 0>
 class UDIntrLstNd {
-  using tLstNd   = UDIntrLstNd<Node, N>;
+  using tLstNd = UDIntrLstNd<Node, N>;
   friend class UDIntrLst<Node, N>;
   friend class UDIntrLstCItr<Node, N>;
 
@@ -127,7 +127,8 @@ public:
  *    release: release all nodes from a list, node not deallocated
  *    destroy: release and delete all nodes from list, may supply custom
  *             destructor function
- *    insert:  put node 'insertNd' after node 'lstNd, forming a list
+ *    insert:  put node nb after node na, forming a list
+ *    merge:   merge list nb after list na
  *    begin:   return an iterator object starting from its given param
  *    cbegin:  return a const iterator object starting from its given param
  *    end:     return the end iterator
@@ -196,14 +197,33 @@ public:
     destroy(root, [](Node* n){ delete n; });
   }
   static void destroy(tLstNd* root){ if (!root) return; destroy(*root); }
-  static void insert(tLstNd& lstNd, tLstNd& insertNd){
-    assert(insertNd.mNxt == nullptr);
-    insertNd.mNxt = lstNd.mNxt;
-    lstNd.mNxt = &insertNd;
+  static void insert(tLstNd& na, tLstNd& nb){
+    //in order to keep the operation O(1), we assume one of the node is
+    //currently a list of itself, or not in any lists
+    assert(nb.mNxt == nullptr || nb.mNxt == &nb ||
+           na.mNxt == nullptr || na.mNxt == &na);
+    tLstNd* rst = (!nb.mNxt || nb.mNxt == &nb) ? na.mNxt : nb.mNxt;
+    rst = rst ? rst : &na;
+    nb.mNxt = rst;
+    na.mNxt = &nb;
   }
-  static void insert(tLstNd* lstNd, tLstNd* insertNd){
-    if (!lstNd || !insertNd) return;
-    insert(*lstNd, *insertNd);
+  static void insert(tLstNd* na, tLstNd* nb){
+    if (!na || !nb) return; insert(*na, *nb);
+  }
+  static void merge(tLstNd& na, tLstNd& nb){
+    if (nb.mNxt == nullptr || nb.mNxt == &nb ||
+        na.mNxt == nullptr || na.mNxt == &na){
+      insert(na, nb);
+      return;
+    }
+    tLstNd* lnk = &na, * end = &nb;
+    for (; lnk->mNxt != &na; lnk = lnk->mNxt);
+    for (; end->mNxt != &nb; end = end->mNxt);
+    lnk->mNxt = &nb;
+    end->mNxt = &na;
+  }
+  static void merge(tLstNd* na, tLstNd* nb){
+    if (!na || !nb) return; merge(*na, *nb);
   }
   static iterator begin(tLstNd& node){ return iterator(node); }
   static iterator begin(tLstNd* node){ return iterator(*node); }
@@ -240,8 +260,10 @@ public:
     mRoot = nullptr;
   }
   void destroy(){ destroy([](Node* n){ delete n; }); }
-  void insert(tLstNd& insertNd){ assert(mRoot); insert(*mRoot, insertNd); }
-  void insert(tLstNd* insertNd){ assert(mRoot); insert(*mRoot, *insertNd); }
+  void insert(tLstNd& nb){ assert(mRoot); insert(*mRoot, nb); }
+  void insert(tLstNd* nb){ assert(mRoot); insert(*mRoot, *nb); }
+  void merge(tLstNd& nb){ assert(mRoot); merge(*mRoot, nb); }
+  void merge(tLstNd* nb){ assert(mRoot); merge(*mRoot, *nb); }
   iterator begin(){ assert(mRoot); return begin(*mRoot); }
   const_iterator cbegin(){ assert(mRoot); return cbegin(*mRoot); }
 };

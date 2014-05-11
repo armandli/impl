@@ -23,8 +23,6 @@
 //9) beware of alignment, it's serious and real
 //10) add performance tuning reports
 
-//TODO: take care of destructor call order, and memory block release order
-
 class Arena;
 
 // placement new implementations
@@ -96,8 +94,8 @@ public:
   template <class T>
   void regDtor(T* ptr, size_t cnt){
     DtorRcd* rec = new (*this) DtorRcd(ptr, cnt, &DtorFn<T>);
-    if (!mCurDtorRcd) DtorList::create(rec);
-    else              DtorList::insert(mCurDtorRcd, rec);
+    if (mCurDtorRcd) DtorList::insert(rec, mCurDtorRcd);
+    else             DtorList::create(rec);
     mCurDtorRcd = rec;
   }
 };
