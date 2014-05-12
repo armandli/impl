@@ -23,6 +23,9 @@
 //9) beware of alignment, it's serious and real
 //10) add performance tuning reports
 
+//TODO: think about how you would able to nauturally use arena allocator for allocation members of a class inside a class 
+//operator new call, without having to force change the syntax of default new and delete
+
 class Arena;
 
 // placement new implementations
@@ -80,15 +83,18 @@ class Arena {
 
   void makeDtorCalls();
 
-  MmryBlk* mFstBlk;     //the first memory allocation block
+  Arena(const Arena&) = delete;
+  Arena& operator=(const Arena&) = delete;
+
   MmryBlk* mCurBlk;     //the current memory block used for memory allocation
+  MmryBlk* mSBlk;       //custom first memory block that does not need to free
   size_t mBlkNxt;       //offset in the current memory block for next allocation
   DtorRcd* mFstDtorRcd; //the first registered destructor call record
   DtorRcd* mCurDtorRcd; //the last registered destructor call record
-
+protected:
+  Arena(void*, size_t); //arena with special allocated first block
 public:
-  Arena();       //arena without allocating any memory block
-  Arena(size_t); //arena with first block allocated with size on heap
+  Arena();              //arena without allocating any memory block
   ~Arena();
 
   void* alloc(size_t);
@@ -104,4 +110,16 @@ public:
     }
     mCurDtorRcd = rec;
   }
+};
+
+/* Arena with first block of size 1<<P2SZ allocated on stack */
+template <unsigned char P2SZ>
+class SArena : public Arena {
+  char mStBlk[1UL<<P2SZ];
+
+  SArena(const SArena&) = delete;
+  SArena& operator=(const SArena&) = delete;
+public:
+  SArena() : Arena(mStBlk, 1UL<<P2SZ) {}
+  ~SArena(){}
 };
