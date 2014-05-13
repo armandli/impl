@@ -1,34 +1,17 @@
 #include "udilist.h"
 
-/* Arena Memory Allocator
- */
-
-//requirements: (TODO)
-//1) arena class type takes a template that determines the size of each page (template could be a power of 2 instead of raw # bytes)
-//2) arena do not need heap allocation the first time it is allocated (first page stack allocation)
-//3) interface for user to register destructors as an option; if no destructor registered, no destructor is called
-//4) unlimited allocation space, allocating more heap pages when run out of space
+//TODO:
 //5) arena used for default placement new syntax
-//6) constructors:
-//     SArena<SZ> arena; // stack allocated arena for first page, other pages heap allocated
-//     Arena arena(buf, sizeof(buf)); //arena taking a preallocated buffer as option
-//     Arena arena(sz); //arena taking a size indicator for first page heap allocated buffer
-//     Arena arena; //arena with no preallocated buffer
-//7) allocation methods:
-//     C* c = new (arena) C(); //placement new syntax support
-//     C* c = new (arena) C[]; //placement new for array syntax support; heuristic determine if first buffer in heap or stack
-//8) destructor registration:
-//     arena.DTOR(c);    //destructor register for allocated c object
-//     arena.DTOR(c, n); //destructor register for allocated c array object
 //9) beware of alignment, it's serious and real
 //10) add performance tuning reports
-
-//TODO: think about how you would able to nauturally use arena allocator for allocation members of a class inside a class 
+////TODO: think about how you would able to nauturally use arena allocator for allocation members of a class inside a class 
 //operator new call, without having to force change the syntax of default new and delete
 
-class Arena;
+/* Arena Memory Allocator */
+class Arena;              //heap arena allocator
+template <size_t> SArena; //stack arena allocator
 
-// placement new implementations
+/* placement new implementations */
 void* operator new(size_t, Arena&);
 void* operator new(size_t, Arena*);
 void* operator new[](size_t, Arena&);
@@ -112,14 +95,18 @@ public:
   }
 };
 
-/* Arena with first block of size 1<<P2SZ allocated on stack */
-template <unsigned char P2SZ>
+/* Arena with first block of size SZ allocated on stack;
+ *   NOTE: SZ is regulated, it will be promoted to byte size 32 if given
+ *         smaller, and rounded up to a number divisible by 4
+ */
+template <size_t SZ>
 class SArena : public Arena {
-  char mStBlk[1UL<<P2SZ];
+  enum : size_t { REAL_SZ = SZ < 32UL ? 32UL : SZ + ((SZ & 2) << 1 | (SZ & 1) << 2) };
+  char mStBlk[REAL_SZ];
 
   SArena(const SArena&) = delete;
   SArena& operator=(const SArena&) = delete;
 public:
-  SArena() : Arena(mStBlk, 1UL<<P2SZ) {}
+  SArena() : Arena(mStBlk, REAL_SZ) {}
   ~SArena(){}
 };

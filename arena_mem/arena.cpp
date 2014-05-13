@@ -39,6 +39,9 @@ bool Arena::isContainable(size_t sz){
   assert(mBlkNxt);
   size_t asz = alignedSize(sz);
   size_t nxt = alignedAddr((size_t)mCurBlk + mBlkNxt, asz) - (size_t)mCurBlk;
+
+  assert(mCurBlk->mBlkSz >= nxt);
+
   if (mCurBlk->mBlkSz - nxt >= asz) return true;
   else                              return false;
 }
@@ -76,7 +79,7 @@ Arena::Arena() :
   mCurBlk(nullptr), mSBlk(nullptr), mBlkNxt(0),
   mFstDtorRcd(nullptr), mCurDtorRcd(nullptr) {}
 Arena::Arena(void* bp, size_t bs) : Arena() {
-  mCurBlk = mSBlk = new (bp) MmryBlk(bs);
+  mCurBlk = mSBlk = ::new (bp) MmryBlk(bs);
   mBlkNxt = sizeof(MmryBlk);
 }
 Arena::~Arena(){ makeDtorCalls(); freeBlks(); }
