@@ -8,8 +8,8 @@
 //operator new call, without having to force change the syntax of default new and delete
 
 /* Arena Memory Allocator */
-class Arena;              //heap arena allocator
-template <size_t> SArena; //stack arena allocator
+class Arena;                    //heap arena allocator
+template <size_t> class SArena; //stack arena allocator
 
 /* placement new implementations */
 void* operator new(size_t, Arena&);
@@ -101,7 +101,11 @@ public:
  */
 template <size_t SZ>
 class SArena : public Arena {
-  enum : size_t { REAL_SZ = SZ < 32UL ? 32UL : SZ + ((SZ & 2) << 1 | (SZ & 1) << 2) };
+  enum : size_t {
+    REAL_SZ = SZ < 32UL ? 32UL :
+                          (SZ & (-1UL ^ 3)) + ((SZ & 2) << 1 | (SZ & 1) << 2)
+  };
+
   char mStBlk[REAL_SZ];
 
   SArena(const SArena&) = delete;
