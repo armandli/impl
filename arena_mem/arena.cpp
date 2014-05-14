@@ -16,13 +16,13 @@ struct Arena::MmryBlk : UDIntrLstNd<Arena::MmryBlk> {
 
 size_t Arena::alignedSize(size_t sz){
   //raise size to minimal 4 byte aligned value
-  return (sz & ((size_t)-1 ^ 3)) + ((sz & 2) << 1 | (sz & 1) << 2);
+  return sz + 3UL & ~3UL;
 }
 
 size_t Arena::alignedAddr(size_t addr, size_t sz){
   //assume addr is already 4 byte aligned, and sz is 4 or 8 byte aligned
-  if (sz & 4) return  addr;
-  else        return (addr & ((size_t)-1 ^ 7)) + ((addr & 4) << 1);
+  if (sz & 4) return addr;
+  else        return addr + 7UL & ~7UL;
 }
 
 void Arena::allocBlk(size_t blksz){

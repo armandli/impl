@@ -103,7 +103,8 @@ template <size_t SZ>
 class SArena : public Arena {
   enum : size_t {
     REAL_SZ = SZ < 32UL ? 32UL :
-                          (SZ & (-1UL ^ 3)) + ((SZ & 2) << 1 | (SZ & 1) << 2)
+              SZ > ~3UL ? ~3UL :
+                          SZ + 3UL & ~3UL
   };
 
   char mStBlk[REAL_SZ];
