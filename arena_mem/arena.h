@@ -2,10 +2,7 @@
 
 //TODO:
 //5) arena used for default placement new syntax
-//9) beware of alignment, it's serious and real
 //10) add performance tuning reports
-////TODO: think about how you would able to nauturally use arena allocator for allocation members of a class inside a class 
-//operator new call, without having to force change the syntax of default new and delete
 
 /* Arena Memory Allocator */
 class Arena;                    //heap arena allocator
@@ -24,8 +21,8 @@ inline void operator delete[](void*, Arena*){} //do nothing
 //barebone arena implementation
 class Arena {
   enum : size_t {
-    BLK_SZ     = 1U << 12, //default block size, same as page size
-    MIN_BLK_SZ = 0x20U,    //minimum size for block is 32 bytes, including MmryBlk
+    BLK_SZ     = 1U << 12U, //default block size, same as page size
+    MIN_BLK_SZ = 0x20U,     //minimum size for block is 32 bytes, including MmryBlk
   };
 
   inline static size_t alignedSize(size_t);

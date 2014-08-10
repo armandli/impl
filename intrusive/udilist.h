@@ -22,7 +22,7 @@ template <class Node, int N> class UDIntrLstItr;  //iterator
  */
 template <class Node, int N = 0>
 class UDIntrLstNd {
-  using tLstNd = UDIntrLstNd<Node, N>;
+  using tLstNd = UDIntrLstNd;
   friend class UDIntrLst<Node, N>;
   friend class UDIntrLstCItr<Node, N>;
 
@@ -37,7 +37,7 @@ public:
 template <class Node, int N = 0>
 class UDIntrLstCItr {
   using tLstNd  = UDIntrLstNd<Node, N>;
-  using tLstItr = UDIntrLstCItr<Node, N>;
+  using tLstItr = UDIntrLstCItr;
 
   const tLstNd* mEnd;
   const tLstNd* mCur;
@@ -93,7 +93,7 @@ public:
 template <class Node, int N = 0>
 class UDIntrLstItr {
   using tLstNd  = UDIntrLstNd<Node, N>;
-  using tLstItr = UDIntrLstItr<Node, N>;
+  using tLstItr = UDIntrLstItr;
 
   UDIntrLstCItr<Node, N> mItr;
 public:
@@ -139,7 +139,7 @@ public:
 template <class Node, int N = 0>
 class UDIntrLst {
   using tLstNd = UDIntrLstNd<Node, N>;
-  using tLst   = UDIntrLst<Node, N>;
+  using tLst   = UDIntrLst;
 
   tLstNd* mRoot;
 public:
