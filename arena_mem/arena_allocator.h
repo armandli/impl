@@ -1,10 +1,9 @@
-#include <memory>
 #include "arena.h"
 
 //STL allocator interface for arena allocator
 
 template <typename T>
-class ArenaAllocator : public std::allocator<T> {
+class ArenaAllocator {
   Arena* mArena; /* ArenaAllocator does not own the arena */
 public:
   typedef std::size_t size_type;
@@ -31,6 +30,18 @@ public:
 
   ~ArenaAllocator() noexcept { /*do nothing*/ }
 
+  pointer address(reference r) const noexcept {
+    return std::__addressof(r);
+  }
+
+  const_pointer address(const_reference r) const noexcept {
+    return std::__addressof(r);
+  }
+
+  size_type max_size() const noexcept {
+    return size_t(-1L) / sizeof(T);
+  }
+
   pointer allocate(size_type n, const void* = 0){
     assert(mArena);
     mArena->alloc(n);
@@ -42,9 +53,20 @@ public:
   void construct(U* p, Args&&... args){
     assert(mArena);
     ::new((void*)p) U(std::forward<Args>(args)...);
-    mArena->regDtor(p, 1);
+//    mArena->regDtor(p, 1); //BUG: arena destructor deallocation have serious problems, need more investigation
   }
 
   template <typename U>
   void destroy(U* p){ /*do nothing*/ }
 };
+
+template <typename T>
+inline bool operator==(const ArenaAllocator<T>&, const ArenaAllocator<T>&){
+  return true;
+}
+
+template <typename T>
+inline bool operator!=(const ArenaAllocator<T>&, const ArenaAllocator<T>&){
+  return false;
+}
+
