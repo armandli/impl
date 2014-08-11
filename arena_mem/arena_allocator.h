@@ -44,7 +44,7 @@ public:
 
   pointer allocate(size_type n, const void* = 0){
     assert(mArena);
-    mArena->alloc(n);
+    return (pointer)mArena->alloc(n * sizeof(T));
   }
 
   void deallocate(pointer, size_type){ /* do nothing */ }
@@ -53,11 +53,12 @@ public:
   void construct(U* p, Args&&... args){
     assert(mArena);
     ::new((void*)p) U(std::forward<Args>(args)...);
-//    mArena->regDtor(p, 1); //BUG: arena destructor deallocation have serious problems, need more investigation
   }
 
   template <typename U>
-  void destroy(U* p){ /*do nothing*/ }
+  void destroy(U* p){
+    mArena->regDtor(p, 1);
+  }
 };
 
 template <typename T>
