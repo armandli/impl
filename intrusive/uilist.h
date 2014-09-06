@@ -5,12 +5,12 @@
 #ifndef __UNIDIRECTIONAL_INTRUSIVE_LIST__
 #define __UNIDIRECTIONAL_INTRUSIVE_LIST__
 
-template <class Node, int N> class UDIntrLstNd;   //node definition
-template <class Node, int N> class UDIntrLst;     //method collection class
-template <class Node, int N> class UDIntrLstCItr; //const iterator
-template <class Node, int N> class UDIntrLstItr;  //iterator
+template <class Node, int N> class UIntrLstNd;   //node definition
+template <class Node, int N> class UIntrLst;     //method collection class
+template <class Node, int N> class UIntrLstCItr; //const iterator
+template <class Node, int N> class UIntrLstItr;  //iterator
 
-/** UDIntrLstNd
+/** UIntrLstNd
  *    Usage:  sub-class this to become an intrusive list node type; a class can
  *            be part of multiple intrusive lists by using different N template
  *            parameter.
@@ -21,59 +21,47 @@ template <class Node, int N> class UDIntrLstItr;  //iterator
  *            list.
  */
 template <class Node, int N = 0>
-class UDIntrLstNd {
-  using tLstNd = UDIntrLstNd;
-  friend class UDIntrLst<Node, N>;
-  friend class UDIntrLstCItr<Node, N>;
+class UIntrLstNd {
+  using tLstNd = UIntrLstNd<Node, N>;
+  friend class UIntrLst<Node, N>;
+  friend class UIntrLstCItr<Node, N>;
 
   tLstNd* mNxt;
 public:
-  UDIntrLstNd() : mNxt(nullptr) {}
-  ~UDIntrLstNd(){ assert(mNxt == nullptr); }
+  UIntrLstNd() : mNxt(nullptr) {}
+  ~UIntrLstNd(){ assert(mNxt == nullptr); }
 };
 
 /** Intrusive List Const Iterator
  */
 template <class Node, int N = 0>
-class UDIntrLstCItr {
-  using tLstNd  = UDIntrLstNd<Node, N>;
-  using tLstItr = UDIntrLstCItr;
+class UIntrLstCItr {
+  using tLstNd  = UIntrLstNd<Node, N>;
+  using tLstItr = UIntrLstCItr;
 
   const tLstNd* mEnd;
   const tLstNd* mCur;
 
-  void init(const tLstNd* start, size_t steps){
-    if (!start || start->mNxt == nullptr){
-      mCur = mEnd = nullptr;
-      return;
-    }
-    mEnd = mCur = start;
-    for (size_t i = 0; i < steps; ++i){
-      if (mCur->mNxt == mEnd){
-        mCur = mEnd = nullptr;
-        break;
-      }
-      mCur = mCur->mNxt;
-    }
+  void init(const tLstNd* start){
+    if (!start || start->mNxt == nullptr) mCur = mEnd = nullptr;
+    else                                  mEnd = mCur = start;
   }
 public:
   static tLstItr end(){ return tLstItr(); }
 
-  UDIntrLstCItr() : mEnd(nullptr), mCur(nullptr) {}
-  UDIntrLstCItr(const tLstNd& start, size_t steps = 0){ init(&start, steps); }
-  UDIntrLstCItr(const tLstNd* start, size_t steps = 0){ init(start, steps); }
-  UDIntrLstCItr(const tLstItr& other) : mEnd(other.mEnd), mCur(other.mCur) {}
-  tLstItr& operator=(const tLstItr& other){
-    mEnd = other.mEnd;
-    mCur = other.mCur;
+  UIntrLstCItr() : mEnd(nullptr), mCur(nullptr) {}
+  explicit UIntrLstCItr(const tLstNd& s){ init(&s); }
+  explicit UIntrLstCItr(const tLstNd* s){ init(s); }
+  explicit UIntrLstCItr(const tLstItr& o) : mEnd(o.mEnd), mCur(o.mCur) {}
+  tLstItr& operator=(const tLstItr& o){
+    mEnd = o.mEnd;
+    mCur = o.mCur;
     return *this;
   }
-  bool operator==(const tLstItr& other) const {
-    return mEnd == other.mEnd && mCur == other.mCur;
+  bool operator==(const tLstItr& o) const {
+    return mEnd == o.mEnd && mCur == o.mCur;
   }
-  bool operator!=(const tLstItr& other) const {
-    return !(this->operator==(other));
-  }
+  bool operator!=(const tLstItr& o) const { return !(this->operator==(o)); }
   tLstItr& operator++(){
     assert(mCur != nullptr);
     if (mCur->mNxt == mEnd) mCur = mEnd = nullptr;
@@ -91,18 +79,18 @@ public:
  *    (implemented using Intrusive List Const Iterator)
  */
 template <class Node, int N = 0>
-class UDIntrLstItr {
-  using tLstNd  = UDIntrLstNd<Node, N>;
-  using tLstItr = UDIntrLstItr;
+class UIntrLstItr {
+  using tLstNd  = UIntrLstNd<Node, N>;
+  using tLstItr = UIntrLstItr;
 
-  UDIntrLstCItr<Node, N> mItr;
+  UIntrLstCItr<Node, N> mItr;
 public:
   static tLstItr end(){ return tLstItr(); }
 
-  UDIntrLstItr() : mItr() {}
-  UDIntrLstItr(const tLstNd& start, size_t steps = 0) : mItr(start, steps) {}
-  UDIntrLstItr(const tLstNd* start, size_t steps = 0) : mItr(start, steps) {}
-  UDIntrLstItr(const tLstItr& other) : mItr(other.mItr) {}
+  UIntrLstItr() : mItr() {}
+  explicit UIntrLstItr(const tLstNd& start) : mItr(start) {}
+  explicit UIntrLstItr(const tLstNd* start) : mItr(start) {}
+  UIntrLstItr(const tLstItr& other) : mItr(other.mItr) {}
   tLstItr& operator=(const tLstItr& other){ mItr = other.mItr; return *this; }
   bool operator==(const tLstItr& other) const {
     return mItr.operator==(other.mItr);
@@ -129,6 +117,8 @@ public:
  *             destructor function
  *    insert:  put node nb after node na, assume nb does not belong to a list
  *             larger than size 1, and na is a list
+ *    remove:  remove the node nb linked after node na, if nb == na, na
+ *             is released
  *    merge:   merge list nb after list na; assume both na and nb are lists
  *    begin:   return an iterator object starting from its given param
  *    cbegin:  return a const iterator object starting from its given param
@@ -137,16 +127,16 @@ public:
  *    setRoot: only available in object instance mode, set root of list
  */
 template <class Node, int N = 0>
-class UDIntrLst {
-  using tLstNd = UDIntrLstNd<Node, N>;
-  using tLst   = UDIntrLst;
+class UIntrLst {
+  using tLstNd = UIntrLstNd<Node, N>;
+  using tLst   = UIntrLst;
 
   tLstNd* mRoot;
 public:
-  using iterator       = UDIntrLstItr<Node, N>;
-  using const_iterator = UDIntrLstCItr<Node, N>;
+  using iterator       = UIntrLstItr<Node, N>;
+  using const_iterator = UIntrLstCItr<Node, N>;
 
-  /* static way of using Intrusive List Methods */
+  /* static way of using Intrusive List */
   static size_t size(const tLstNd& start){
     if (start.mNxt == nullptr) return 0;
     size_t count = 1;
@@ -163,7 +153,7 @@ public:
     assert(root.mNxt == nullptr);
     root.mNxt = &root;
   }
-  static void create(tLstNd* root){ if (!root) return; create(*root); }
+  static void create(tLstNd* root){ if (root) create(*root); }
   static void release(tLstNd& root){
     if (root.mNxt == nullptr) return;
     tLstNd* cur = root.mNxt;
@@ -174,7 +164,7 @@ public:
       cur = cur->mNxt;
     } while (cur);
   }
-  static void release(tLstNd* root){ if (!root) return; release(*root); }
+  static void release(tLstNd* root){ if (root) release(*root); }
   template <class Func>
   static void destroy(tLstNd& root, Func dtorFn){
     if (root.mNxt == nullptr){
@@ -192,19 +182,32 @@ public:
   }
   template <class Func>
   static void destroy(tLstNd* root, Func dtorFn){
-    if (!root) return; destroy<Func>(*root, dtorFn);
+    if (root) destroy<Func>(*root, dtorFn);
   }
   static void destroy(tLstNd& root){
     destroy(root, [](Node* n){ delete n; });
   }
-  static void destroy(tLstNd* root){ if (!root) return; destroy(*root); }
+  static void destroy(tLstNd* root){ if (root) destroy(*root); }
   static void insert(tLstNd& na, tLstNd& nb){
     assert(na.mNxt && (nb.mNxt == nullptr || nb.mNxt == &nb));
     nb.mNxt = na.mNxt;
     na.mNxt = &nb;
   }
   static void insert(tLstNd* na, tLstNd* nb){
-    if (!na || !nb) return; insert(*na, *nb);
+    if (na && nb) insert(*na, *nb);
+  }
+  static void remove(tLstNd& node){
+    assert(node.mNxt);
+    if (node.mNxt == &node){
+      release(node);
+      return;
+    }
+    tLstNd* nxt = node.mNxt;
+    node.mNxt = nxt->mNxt;
+    nxt->mNxt = nullptr;
+  }
+  static void remove(tLstNd* node){
+    if (node) remove(*node);
   }
   static void merge(tLstNd& na, tLstNd& nb){
     assert(na.mNxt && nb.mNxt);
@@ -215,47 +218,41 @@ public:
     end->mNxt = &na;
   }
   static void merge(tLstNd* na, tLstNd* nb){
-    if (!na || !nb) return; merge(*na, *nb);
+    if (na && nb) merge(*na, *nb);
   }
   static iterator begin(tLstNd& node){ return iterator(node); }
-  static iterator begin(tLstNd* node){ return iterator(*node); }
+  static iterator begin(tLstNd* node){ return iterator(node); }
   static const_iterator cbegin(const tLstNd& node){return const_iterator(node);}
   static const_iterator cbegin(const tLstNd* node){return const_iterator(node);}
   static iterator end(){ return iterator::end(); }
   static const_iterator cend(){ return const_iterator::end(); }
 
   /* Object instance way of using Intrusive List */
-  UDIntrLst() : mRoot(nullptr) {}
-  UDIntrLst(tLstNd& node) : mRoot(&node) {
+  UIntrLst() : mRoot(nullptr) {}
+  explicit UIntrLst(tLstNd& node) : mRoot(&node) {
     assert(mRoot);
     if (!mRoot->mNxt) create(*mRoot);
   }
-  UDIntrLst(tLstNd* node) : UDIntrLst(*node) {}
-  UDIntrLst(const tLst& other) : mRoot(other.mRoot) {}
-  tLst& operator=(const tLst& other){ mRoot = other.mRoot; return *this; }
-  ~UDIntrLst(){}
+  explicit UIntrLst(tLstNd* node) : mRoot(node) {
+    if (mRoot && !mRoot->mNxt) create(*mRoot);
+  }
+  UIntrLst(const tLst& o) : mRoot(o.mRoot) {}
+  tLst& operator=(const tLst& o){ mRoot = o.mRoot; return *this; }
+  ~UIntrLst(){}
 
-  void setRoot(tLstNd& r){
-    mRoot = &r;
-    if (!mRoot->mNxt) create(*mRoot);
-  }
-  void setRoot(tLstNd* r){
-    mRoot = r;
-    if (r) setRoot(*r);
-  }
+  void setRoot(tLstNd& r){ mRoot = &r; if (!mRoot->mNxt) create(*mRoot); }
+  void setRoot(tLstNd* r){ if (r) setRoot(*r); }
   size_t size(){ assert(mRoot); return size(*mRoot); }
   void release(){ assert(mRoot); release(*mRoot); }
-  template <class Func>
-  void destroy(Func dtorFn){
-    assert(mRoot);
-    destroy(*mRoot, dtorFn);
-    mRoot = nullptr;
+  template <class Func> void destroy(Func dtorFn){
+    assert(mRoot); destroy(*mRoot, dtorFn); mRoot = nullptr;
   }
   void destroy(){ destroy([](Node* n){ delete n; }); }
   void insert(tLstNd& nb){ assert(mRoot); insert(*mRoot, nb); }
-  void insert(tLstNd* nb){ assert(mRoot); insert(*mRoot, *nb); }
+  void insert(tLstNd* nb){ assert(mRoot); insert(mRoot, nb); }
+  void remove(){ assert(mRoot); remove(*mRoot); }
   void merge(tLstNd& nb){ assert(mRoot); merge(*mRoot, nb); }
-  void merge(tLstNd* nb){ assert(mRoot); merge(*mRoot, *nb); }
+  void merge(tLstNd* nb){ assert(mRoot); merge(mRoot, nb); }
   iterator begin(){ assert(mRoot); return begin(*mRoot); }
   const_iterator cbegin(){ assert(mRoot); return cbegin(*mRoot); }
 };

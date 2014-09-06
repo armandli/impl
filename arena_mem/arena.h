@@ -1,4 +1,4 @@
-#include "udilist.h"
+#include "uilist.h"
 
 //TODO:
 //5) arena used for default placement new syntax
@@ -29,7 +29,7 @@ class Arena {
   inline static size_t alignedAddr(size_t addr, size_t sz);
 
   struct MmryBlk;  //memory block struct
-  using BlockList = UDIntrLst<MmryBlk>;
+  using BlockList = UIntrLst<MmryBlk>;
 
   void allocBlk(size_t);
   void freeBlks();
@@ -45,7 +45,7 @@ class Arena {
   }
 
   //destructor call record struct
-  struct DtorRcd : UDIntrLstNd<Arena::DtorRcd> {
+  struct DtorRcd : UIntrLstNd<Arena::DtorRcd> {
     void* mPtr;
     size_t mCnt;
     DtorFnPtrTy mDtorFn;
@@ -59,7 +59,7 @@ class Arena {
     DtorRcd(const DtorRcd&) = delete;
     DtorRcd& operator=(const DtorRcd&) = delete;
   };
-  using DtorList = UDIntrLst<DtorRcd>;
+  using DtorList = UIntrLst<DtorRcd>;
 
   void makeDtorCalls();
 

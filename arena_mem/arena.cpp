@@ -3,7 +3,7 @@
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 
-struct Arena::MmryBlk : UDIntrLstNd<Arena::MmryBlk> {
+struct Arena::MmryBlk : UIntrLstNd<Arena::MmryBlk> {
   size_t mBlkSz;
 
   MmryBlk(size_t sz) : mBlkSz(sz) {}
