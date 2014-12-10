@@ -26,7 +26,7 @@ namespace NN {
     static void initialize(arma::Mat<T>& m, bool isFirstLayer){
       InitFun<T> f;
       f.initialize(m, isFirstLayer);
-    }
+      }
     };
   
   template <typename T = double>
@@ -196,7 +196,7 @@ namespace NN {
         backPropagation(in, out);
         }
 
-      return ActFunTrait<ActFunc>::function(mLMtx.back());
+      return ActFunTrait<ActFunc>::function(mLMtx.back()) - out;
       }
   
     /* Test the neural network; return test result matrix for error calculation*/
