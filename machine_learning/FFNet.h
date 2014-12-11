@@ -54,7 +54,7 @@ namespace NN {
     };
 
   template <typename T = double>
-  class HyperbolicTangentFun {
+  class HTanFun {
   public:
     arma::Mat<T> function(const arma::Mat<T>& m){
       arma::Mat<T> r(m.n_rows, m.n_cols);
@@ -77,7 +77,7 @@ namespace NN {
     };
   
   template <typename T = double>
-  struct RndPInitialization {
+  struct RndPInit {
     void initialize(arma::Mat<T>& m, bool){
       //TODO: there may be an issue where STL uniform distribution fail to produce
       //upperbound value; this is a standard issue in C++11
@@ -90,7 +90,7 @@ namespace NN {
     };
   
   template <typename T = double>
-  struct RndNInitialization {
+  struct RndNInit {
     void initialize(arma::Mat<T>& m, bool){
       //TODO: there may be an issue where STL uniform distribution fail to produce
       //upperbound value; this is a standard issue in C++11
@@ -104,7 +104,7 @@ namespace NN {
 
   /* Nguyen-Widrow weight initialization */
   template <typename T = double>
-  struct NWInitialization {
+  struct NWInit {
     void initialize(arma::Mat<T>& m, bool isFirstLayer){
       //TODO: there may be an issue where STL uniform distribution fail to produce
       //upperbound value; this is a standard issue in C++11
@@ -258,7 +258,7 @@ namespace NN {
        *     l   = learning rate
        *     m   = momentum
        *
-       * Innder Layer (non-output layer) Gradient Descent
+       * Inner Layer (non-output layer) Gradient Descent
        *   Del[N*O] = Del1[N*O1] * W1[O*O1]^t % f'(L[N*O])
        *   G[I*O]   = P[N*I]^t * Del[N*O]
        *   DW@t+1   = l * G + m * DW@t
