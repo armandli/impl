@@ -20,18 +20,13 @@
 
 namespace NN {
 
-  /* Normalization Function Trait */
-  template <template <typename> class NormFun, typename T = double>
-  struct NormFunTrait {
-    static void normalize(arma::Mat<T>& m){
-      NormFun<T> f;
-      f.normalize(m);
-      }
-    };
-
   /* Activation Function Trait */
   template <template <typename> class ActFun, typename T = double>
   struct ActFunTrait {
+    static void normalize(arma::Mat<T>& m){
+      ActFun<T> f;
+      f.normalize(m);
+      }
     static arma::Mat<T> function(const arma::Mat<T>& m){
       ActFun<T> f;
       return f.function(m);
@@ -47,13 +42,13 @@ namespace NN {
             template <typename> class ActFun,
             typename T = double>
   struct CostFunTrait {
-    static arma::Mat<T> cost(const arma::Mat<T>& z, const arma::Mat<T>& e){
+    static T cost(const arma::Mat<T>& a, const arma::Mat<T>& e){
       CostFun<ActFun, T> f;
-      return f.cost(z, e);
+      return f.cost(a, e);
       }
-    static arma::Mat<T> deriviative(const arma::Mat<T>& z, const arma::Mat<T>& e){
+    static arma::Mat<T> deriviative(const arma::Mat<T>& z, const arma::Mat<T>& a, const arma::Mat<T>& e){
       CostFun<ActFun, T> f;
-      return f.deriviative(z, e);
+      return f.deriviative(z, a, e);
       }
     };
 
@@ -74,39 +69,11 @@ namespace NN {
       f.initialize(m, isFirstLayer);
       }
     };
-
-  //TODO: maybe we should combine normalization function and activation function together
-  /* Linear Normalization Function */
-  template <typename T = double>
-  struct LinearNormFun {
-    void normalize(arma::Mat<T>&){ /*do nothing*/ }
-    };
-
-  /* Sigmoid Normalization Function */
-  template <typename T = double>
-  struct SigmoidNormFun {
-    void normalize(arma::Mat<T>& m){
-      T maxVal = arma::max(arma::max(m));
-      T minVal = arma::min(arma::min(m));
-
-      m.transform( [=](T v){ return (v - minVal) / (maxVal - minVal); } );
-      }
-    };
-
-  /* Hyperbolic Tangent Normalization Function */
-  template <typename T = double>
-  struct HTanNormFun {
-    void normalize(arma::Mat<T>& m){
-      T maxVal = arma::max(arma::max(m));
-      T minVal = arma::min(arma::min(m));
-
-      m.transform( [=](T v){ return ((v - minVal) / (maxVal - minVal) - 0.5L) * 2.L ; } );
-      }
-    };
   
   /* Linear Activation Function */
   template <typename T = double>
   struct LinearFun {
+    void normalize(arma::Mat<T>&){ /*do nothing*/ }
     arma::Mat<T> function(const arma::Mat<T>& m){
       arma::Mat<T> r = m;
       return r;
@@ -124,6 +91,12 @@ namespace NN {
     static T sigmoid(T v){
       return 1. / (1. + exp(-1. * v));
       }
+    void normalize(arma::Mat<T>& m){
+      T maxVal = arma::max(arma::max(m));
+      T minVal = arma::min(arma::min(m));
+
+      m.transform( [=](T v){ return (v - minVal) / (maxVal - minVal); } );
+      }
     arma::Mat<T> function(const arma::Mat<T>& m){
       arma::Mat<T> r = m;
       r.transform( [](T v){ return SigmoidFun<T>::sigmoid(v); } );
@@ -139,6 +112,12 @@ namespace NN {
   /* Hyperbolic Tangent Activation Function */
   template <typename T = double>
   struct HTanFun {
+    void normalize(arma::Mat<T>& m){
+      T maxVal = arma::max(arma::max(m));
+      T minVal = arma::min(arma::min(m));
+
+      m.transform( [=](T v){ return ((v - minVal) / (maxVal - minVal) - 0.5L) * 2.L ; } );
+      }
     arma::Mat<T> function(const arma::Mat<T>& m){
       arma::Mat<T> r = m;
       r.transform( [](T v){ return std::tanh(v); } );
@@ -154,26 +133,25 @@ namespace NN {
   /* Quadradic Cost Function */
   template <template <typename> class ActFun, typename T = double>
   struct QCost {
-    //TODO
-    arma::Mat<T> cost(const arma::Mat<T>& z, const arma::Mat<T>& e){
-      T n = arma::norm(z - e, 2);
-      return 0.5 * n * n;
+    T cost(const arma::Mat<T>& a, const arma::Mat<T>& e){
+      T n = a - e;
+      arma::Mat<T> tmp = arma::sum(n % n, 1) % (T)a.n_rows;
+      return 0.5 * arma::sum(arma::sum(tmp));
       }
-    arma::Mat<T> deriviative(const arma::Mat<T>& z, const arma::Mat<T>& e){
-      return (ActFunTrait<ActFun,T>::function(z) - e) % ActFunTrait<ActFun,T>::deriviative(z);
+    arma::Mat<T> deriviative(const arma::Mat<T>& z, const arma::Mat<T>& a, const arma::Mat<T>& e){
+      return (a - e) % ActFunTrait<ActFun,T>::deriviative(z);
       }
     };
 
   /* Cross Entropy Cost Function */
   template <template <typename> class ActFun, typename T = double>
   struct CECost {
-    //TODO
-    arma::Mat<T> cost(const arma::Mat<T>& z, const arma::Mat<T>& e){
-      arma::Mat<T> a = ActFunTrait<ActFun,T>::function(z);
-      return arma::sum(arma::sum(-1 % e % arma::log(a) - (1 - e) % arma::log(1 - a))) / (T)z.n_rows;
+    T cost(const arma::Mat<T>& a, const arma::Mat<T>& e){
+      arma::Mat<T> tmp = arma::sum(-1 * e % arma::log(a) - (1 - e) % arma::log(1 - a), 1) / (T)a.n_rows;
+      return arma::sum(arma::sum(tmp));
       }
-    arma::Mat<T> deriviative(const arma::Mat<T>& z, const arma::Mat<T>& e){
-      return ActFunTrait<ActFun,T>::function(z) - e;
+    arma::Mat<T> deriviative(const arma::Mat<T>& z, const arma::Mat<T>& a, const arma::Mat<T>& e){
+      return a - e;
       }
     };
 
@@ -239,7 +217,7 @@ namespace NN {
   /* Random Initialization Function; value [-1.,1.] with Gaussian Distribution of mean 0 */
   template <typename T = double>
   struct GauNInit {
-    void initialization(arma::Mat<T>& m, bool){
+    void initialize(arma::Mat<T>& m, bool){
       unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
       std::default_random_engine generator(seed);
       std::normal_distribution<T> distribution(-1., 1.);
@@ -254,14 +232,14 @@ namespace NN {
     void initialize(arma::Mat<T>& m, bool isFirstLayer){
       unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
       std::default_random_engine generator(seed);
-      std::uniform_real_distribution<T> distribution(-0.5, 0.5);
+      std::normal_distribution<T> distribution(-1., 1.);
 
       m.imbue( [&distribution, &generator](){ return distribution(generator); } );
 
       if (!isFirstLayer) return;
 
       // Nguyen-Widrow initialization does special operations to first layer only
-      double beta = 0.7 * std::pow(m.n_cols, 1. / m.n_rows);
+      double beta = 0.7 * std::pow((T)m.n_cols, 1. / m.n_rows);
       arma::Mat<T> N(arma::sqrt(arma::sum(arma::pow(m, 2))));
       assert(N.n_rows == 1);
       for (size_t ic = 0; ic < m.n_cols; ++ic)
@@ -294,23 +272,30 @@ namespace NN {
      * Row: # of input
      * Col: # of neuron in this layer
      */
-    std::vector<arma::Mat<T>> mLMtx;
-    //TODO: save the activation output as well to avoid computation
+    std::vector<arma::Mat<T>> mZMtx;
+    /* activated output of neurons in each layer, not include input layer.
+     * Row: # of input
+     * Col: # of neuron in this layer
+     */
+    std::vector<arma::Mat<T>> mAMtx;
     size_t mInSize;
     size_t mOutSize;
     size_t mEpoch;
   
     void feedForward(const arma::Mat<T>& im){
       assert(mWMtx.size() >= 1);
-      mLMtx.clear();
+      mZMtx.clear();
+      mAMtx.clear();
   
       arma::Mat<T> d = im * mWMtx[0] + arma::repmat(mBMtx[0], im.n_rows, 1);
       arma::Mat<T> e = ActFunTrait<ActFunc,T>::function(d);
-      mLMtx.push_back(d);
+      mZMtx.push_back(d);
+      mAMtx.push_back(e);
       for (size_t i = 1; i < mWMtx.size(); ++i){
         d = e * mWMtx[i] + arma::repmat(mBMtx[i], im.n_rows, 1);
         e = ActFunTrait<ActFunc,T>::function(d);
-        mLMtx.push_back(d);
+        mZMtx.push_back(d);
+        mAMtx.push_back(e);
         }
       }
   
@@ -374,18 +359,16 @@ namespace NN {
         }
       }
   
-    /* Train the neural network; return training result matrix for error calculation*/
-    arma::Mat<T> train(const arma::Mat<T>& data){
-      assert(data.n_cols == mInSize + mOutSize);
+    /* Train the neural network; return training cost and validation cost after each epoch,
+     * if training or validation cost was not specified to generate, return vector contains nothing*/
+    std::vector<T> train(const arma::Mat<T>& td,                  //training data
+                         const arma::Mat<T>& vd = arma::Mat<T>(), //validation data
+                         bool computeTrainingCost = false,
+                         bool computeValidationCost = false){
+      assert(td.n_cols == mInSize + mOutSize);
       assert(mWMtx.size() >= 1 && mBMtx.size() >= 1);
   
-      static_cast<Derived&>(*this).backPropagate(data);
-
-      arma::Mat<T> in = data.cols(0, mInSize - 1);
-      arma::Mat<T> out = data.cols(mInSize, data.n_cols - 1);
-
-      feedForward(in);
-      return out - ActFunTrait<ActFunc,T>::function(mLMtx.back());
+      return static_cast<Derived&>(*this).backPropagate(td, vd, computeTrainingCost, computeValidationCost);
       }
   
     /* Test the neural network; return test result matrix for error calculation*/
@@ -396,12 +379,12 @@ namespace NN {
       arma::Mat<T> out = data.cols(mInSize, data.n_cols - 1);
 
       feedForward(in);
-      return out - ActFunTrait<ActFunc,T>::function(mLMtx.back());
+      return out - mAMtx.back();
       }
   
     arma::Mat<T> predict(const arma::Mat<T>& in){
       feedForward(in);
-      return ActFunTrait<ActFunc,T>::function(mLMtx.back());
+      return mAMtx.back();
       }
     };
   
@@ -414,9 +397,9 @@ namespace NN {
   class BPFFNet : public FFNet<BPFFNet<CostFunc, ActFunc, InitFunc, RegFunc, T>, ActFunc, InitFunc, T> {
     /* previous change to weight matrix for momentum calculation */
     std::vector<arma::Mat<T>> mDWMtx;
-    T mLearn;
-    T mRegu;
-    T mMomentum;
+    T mLearn;    //learning rate
+    T mRegu;     //regularization rate lambda
+    T mMomentum; //momentum
     size_t mBatchSize;
   public:
     template <size_t ... Hs>
@@ -437,14 +420,16 @@ namespace NN {
   
     virtual ~BPFFNet(){}
   
-    void backPropagate(const arma::Mat<T>& data){
+    std::vector<T> backPropagate(const arma::Mat<T>& data, const arma::Mat<T>& vd, bool computeTrainingCost, bool computeValidationCost){
       std::vector<arma::Mat<T>>& mWMtx = this->mWMtx;
-      std::vector<arma::Mat<T>>& mLMtx = this->mLMtx;
       std::vector<arma::Mat<T>>& mBMtx = this->mBMtx;
+      std::vector<arma::Mat<T>>& mZMtx = this->mZMtx;
+      std::vector<arma::Mat<T>>& mAMtx = this->mAMtx;
       size_t mInSize = this->mInSize;
       size_t mOutSize = this->mOutSize;
       size_t mEpoch = this->mEpoch;
       T regLearn = mLearn * mBatchSize / data.n_rows;
+      std::vector<T> costs;
 
       for (size_t i = 0; i < mEpoch; ++i){
         arma::Mat<T> sdata = arma::shuffle(data, 0);
@@ -457,8 +442,8 @@ namespace NN {
           // feed forward step for back propagation
           this->feedForward(in);
   
-          arma::Mat<T> d = CostFunTrait<CostFunc,ActFunc,T>::deriviative(mLMtx.back(), out);
-          const arma::Mat<T>& p = mLMtx.size() == 1 ? in : ActFunTrait<ActFunc,T>::function(mLMtx[mLMtx.size() - 2]);
+          arma::Mat<T> d = CostFunTrait<CostFunc,ActFunc,T>::deriviative(mZMtx.back(), mAMtx.back(), out);
+          const arma::Mat<T>& p = mAMtx.size() == 1 ? in : mAMtx[mAMtx.size() - 2];
           arma::Mat<T> g = arma::strans(p) * d;
           arma::Mat<T> w = mLearn * g + mMomentum * mDWMtx.back();
           // if there is no hidden layer, we can update the weight matrix now
@@ -470,29 +455,56 @@ namespace NN {
       
           // do the hidden layers in reverse iterative order,
           // this loop only happens if there is >1 hidden layers
-          for (size_t i = mLMtx.size() - 2; mLMtx.size() > 2 && i > 0; --i){
+          for (size_t i = mAMtx.size() - 2; mAMtx.size() > 2 && i > 0; --i){
             mBMtx[i+1] -= mLearn * arma::sum(d);
-            d = ActFunTrait<ActFunc,T>::deriviative(mLMtx[i]) % (d * arma::strans(mWMtx[i+1]));
-            g = arma::strans(ActFunTrait<ActFunc,T>::function(mLMtx[i - 1])) * d;
+            d = ActFunTrait<ActFunc,T>::deriviative(mZMtx[i]) % (d * arma::strans(mWMtx[i+1]));
+            g = arma::strans(mAMtx[i - 1]) * d;
             RegFunTrait<RegFunc>::regularize(mWMtx[i+1], w, regLearn, mRegu);
             mDWMtx[i+1] = w;
             w = mLearn * g + mMomentum * mDWMtx[i];
             }
           // do the first layer if # hidden layer > 0
-          if (mLMtx.size() >= 2){
+          if (mZMtx.size() >= 2){
             mBMtx[1] -= mLearn * arma::sum(d);
-            d = ActFunTrait<ActFunc,T>::deriviative(mLMtx[0]) % (d * arma::strans(mWMtx[1]));
+            d = ActFunTrait<ActFunc,T>::deriviative(mZMtx[0]) % (d * arma::strans(mWMtx[1]));
             g = arma::strans(in) * d;
             RegFunTrait<RegFunc>::regularize(mWMtx[1], w, regLearn, mRegu);
             mDWMtx[1] = w;
             w = mLearn * g + mMomentum * mDWMtx[0];
-            RegFunTrait<RegFunc>::regularize(mWMtx[0], w, regLearn, mRegu);
             mBMtx[0] -= mLearn * arma::sum(d);
-            mWMtx[0] -= w;
+            RegFunTrait<RegFunc>::regularize(mWMtx[0], w, regLearn, mRegu);
             mDWMtx[0] = w;
             }
           }
+        if (computeTrainingCost){
+          arma::Mat<T> in = sdata.cols(0, sdata.n_cols - mOutSize - 1);
+          arma::Mat<T> out = sdata.cols(sdata.n_cols - mOutSize, sdata.n_cols - 1);
+          this->feedForward(in);
+          costs.push_back(computeCost(mAMtx.back(), out));
+          }
+        if (computeValidationCost && vd.n_rows > 0 && vd.n_cols == mInSize + mOutSize){
+          arma::Mat<T> in = vd.cols(0, vd.n_cols - mOutSize - 1);
+          arma::Mat<T> out = vd.cols(vd.n_cols - mOutSize, vd.n_cols - 1);
+          this->feedForward(in);
+          costs.push_back(computeCost(mAMtx.back(), out));
+          }
         }
+      return costs;
+      }
+  private:
+    T computeCost(const arma::Mat<T>& a, const arma::Mat<T>& e){
+      //compute the cost of result
+      T cost = CostFunTrait<CostFunc, ActFunc, T>::cost(a, e);
+      //add cost of weight of the neural network
+      std::vector<arma::Mat<T>>& mWMtx = this->mWMtx;
+      if (mRegu != 0.){
+        T wcost = 0.;
+        for (const auto& w : mWMtx)
+          wcost += arma::sum(arma::sum(w % w));
+        wcost *= 0.5 * mRegu / (T)a.n_rows;
+        cost += wcost;
+      }
+      return cost;
       }
     };
   }
