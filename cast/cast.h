@@ -71,3 +71,12 @@ To* cast_or_null(From* from){
   if (To::classOf(from)) return static_cast<To*>(from);
   else                   return nullptr;
 }
+
+#define IMPLEMENT_GETTYPE \
+  ClassId getType() const { return mType; }
+
+#define IMPLEMENT_CLASSOF_SELF(ClassName) \
+  static bool classOf(const ClassName* c){\
+    if (not c) return false;\
+    else       return true;\
+  }

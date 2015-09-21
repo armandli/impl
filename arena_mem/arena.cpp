@@ -95,6 +95,8 @@ void* operator new[](size_t sz, Arena& arena){
   return arena.alloc(sz);
 }
 void* operator new[](size_t sz, Arena* arena){
+  //TODO: bug array new needs to have additional size in the front to save size,
+  //this size is compiler defined, and have to be reverse engineered.
   assert(arena != nullptr);
   return arena->alloc(sz);
 }
