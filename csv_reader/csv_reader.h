@@ -2,8 +2,8 @@
 #include <cstring>
 #include <map>
 #include <set>
+#include <vector>
 #include <string>
-
 
 struct csv_reader {
   typedef bool (&callback)(const std::map<std::string, const char*>& cmap, unsigned lineno);
@@ -22,7 +22,7 @@ private:
   FILE* m_fd;
   std::string m_delim;
   int m_max_sz;
-  std::map<int, std::string> m_columns;
+  std::vector<std::map<std::string, const char*>::iterator> m_columns;
   std::map<std::string, const char*> m_linemap;
   std::string m_error;
 
@@ -58,11 +58,11 @@ public:
   csv_reader(const char* filename, const std::set<Column>& columns, const char* delimiter = ",", int max_size = 4096);
   ~csv_reader(){ close(); }
 
-  bool is_open() const;
-  const char* error() const;
+  bool is_open() const { return m_fd != NULL; }
+  const char* error() const { return m_error.c_str(); }
 
   bool read_line();
-  std::map<std::string, const char*>& map(){ return m_linemap; }
+  const std::map<std::string, const char*>& map() const { return m_linemap; }
 
   void process(callback func);
 };

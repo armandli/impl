@@ -27,17 +27,30 @@ void csv_reader::read_header(const std::set<Column>& columns){
 
   get_line(buffer, m_max_sz, m_fd);
 
-  std::set<Column> found;
-  char* pc = strtok(buffer, m_delim.c_str());
-  for (int col_count = 0; pc; col_count++, pc = strtok(NULL, m_delim.c_str())){
+  if (buffer.m_buff == NULL){
+    m_error = "File is empty";
+    close();
+    return;
+  }
+
+  std::map<Column, int> found;
+
+  int col_count = 0;
+  for (char* pc = strtok(buffer, m_delim.c_str()); pc; ++col_count, pc = strtok(NULL, m_delim.c_str())){
     Column c = {pc, false};
     std::set<Column>::iterator it = columns.find(c);
     if (columns.size() == 0 || it != columns.end()){
-      found.insert(c);
-      m_columns.insert(std::make_pair(col_count, std::string(c.m_name)));
+      found.insert(std::make_pair(c, col_count));
       m_linemap.insert(std::make_pair(std::string(c.m_name), (const char*)0));
     }
   }
+
+  m_columns.reserve(col_count + 1);
+
+  for (int i = 0; i < col_count; ++i)
+    m_columns.push_back(m_linemap.end());
+  for (std::map<Column, int>::iterator it = found.begin(); it != found.end(); ++it)
+    m_columns[(*it).second] = m_linemap.find(std::string((*it).first.m_name));
 
   if (columns.size() == 0) return;
 
@@ -54,19 +67,11 @@ void csv_reader::read_header(const std::set<Column>& columns){
 void csv_reader::read(Buffer& buffer){
   char* pc = strtok(buffer, m_delim.c_str());
   for (int col = 0; pc; ++col, pc = strtok(NULL, m_delim.c_str())){
-    std::map<int, std::string>::iterator it = m_columns.find(col);
-    if (it != m_columns.end()){
-      m_linemap[(*it).second] = pc;
+    std::map<std::string, const char*>::iterator it = m_columns[col];
+    if (it != m_linemap.end()){
+      (*it).second = pc;
     }
   }
-}
-
-bool csv_reader::is_open() const {
-  return m_fd != NULL;
-}
-
-const char* csv_reader::error() const {
-  return m_error.c_str();
 }
 
 bool csv_reader::read_line(){
