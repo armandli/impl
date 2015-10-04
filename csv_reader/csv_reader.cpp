@@ -1,4 +1,5 @@
 #include <sstream>
+#include <limits>
 
 #include "csv_reader.h"
 
@@ -88,20 +89,4 @@ bool csv_reader::read_line(){
 
   read(buffer);
   return true;
-}
-
-void csv_reader::process(callback func){
-  if (m_fd == NULL) return;
-
-  Buffer buffer(m_max_sz);
-  if (buffer.m_buff == NULL){
-    m_error = "Buffer bad alloc";
-    close();
-    return;
-  }
-
-  for (unsigned lineno = 0; get_line(buffer, m_max_sz, m_fd); ++lineno){
-    read(buffer);
-    if (not func(map(), lineno)) break;
-  }
 }

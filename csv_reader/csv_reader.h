@@ -4,9 +4,9 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <limits>
 
 struct csv_reader {
-  typedef bool (&callback)(const std::map<std::string, const char*>& cmap, unsigned lineno);
   struct Column {
     const char* m_name;
     bool m_required;
@@ -64,5 +64,24 @@ public:
   bool read_line();
   const std::map<std::string, const char*>& map() const { return m_linemap; }
 
-  void process(callback func);
+  template <typename F>
+  void process(F& func, int offset = -1, int length = -1){
+    if (m_fd == NULL) return;
+  
+    Buffer buffer(m_max_sz);
+    if (buffer.m_buff == NULL){
+      m_error = "Buffer bad alloc";
+      close();
+      return;
+    }
+  
+    if (offset < 0) offset = 0;
+    if (length < 0) length = std::numeric_limits<int>::max();
+  
+    for (int lineno = 0; lineno - offset < length && get_line(buffer, m_max_sz, m_fd); ++lineno){
+      if (lineno < offset) continue;
+      read(buffer);
+      if (not func(map(), lineno)) break;
+    }
+  }
 };
