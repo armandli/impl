@@ -25,6 +25,7 @@ private:
   std::vector<std::map<std::string, const char*>::iterator> m_columns;
   std::map<std::string, const char*> m_linemap;
   std::string m_error;
+  char* m_strtok_register;
 
   struct Buffer {
     char* m_buff;
@@ -46,12 +47,31 @@ private:
       m_fd = NULL;
     }
   }
+
   char* get_line(char* buffer, int max_size, FILE* fd){
     char* ret = fgets(buffer, max_size, fd);
-    char* el = strrchr(buffer, '\n');
+    char* el = std::strrchr(buffer, '\n');
     if (el) *el = '\0';
     return ret;
   }
+
+  char* strtok(char* __restrict__ str, const char* const __restrict__ delim){
+    char* start = str ? str : m_strtok_register;
+    if (not start) return NULL;
+
+    char* ret = start;
+
+    for (; *start && not std::strchr(delim, *start); ++start);
+
+    if (*start){
+      m_strtok_register = &1[start];
+      *start = '\0';
+    } else 
+      m_strtok_register = NULL;
+
+    return ret;
+  }
+
   void read_header(const std::set<Column>& columns);
   void read(Buffer& buffer);
 public:

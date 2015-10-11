@@ -4,7 +4,7 @@
 #include "csv_reader.h"
 
 csv_reader::csv_reader(const char* filename, const std::set<Column>& columns, const char* delimiter, int max_size) :
-    m_fd(fopen64(filename, "r")), m_delim(delimiter), m_max_sz(max_size){
+    m_fd(fopen64(filename, "r")), m_delim(delimiter), m_max_sz(max_size), m_strtok_register(NULL) {
   if (m_fd == NULL){
     std::stringstream ss;
     ss << "Failed to open file " << filename;
@@ -37,7 +37,7 @@ void csv_reader::read_header(const std::set<Column>& columns){
   std::map<Column, int> found;
 
   int col_count = 0;
-  for (char* pc = strtok(buffer, m_delim.c_str()); pc; ++col_count, pc = strtok(NULL, m_delim.c_str())){
+  for (char* pc = (*this).strtok(buffer, m_delim.c_str()); pc; ++col_count, pc = (*this).strtok(NULL, m_delim.c_str())){
     Column c = {pc, false};
     std::set<Column>::iterator it = columns.find(c);
     if (columns.size() == 0 || it != columns.end()){
@@ -66,8 +66,8 @@ void csv_reader::read_header(const std::set<Column>& columns){
 }
 
 void csv_reader::read(Buffer& buffer){
-  char* pc = strtok(buffer, m_delim.c_str());
-  for (int col = 0; pc; ++col, pc = strtok(NULL, m_delim.c_str())){
+  char* pc = (*this).strtok(buffer, m_delim.c_str());
+  for (int col = 0; pc; ++col, pc = (*this).strtok(NULL, m_delim.c_str())){
     std::map<std::string, const char*>::iterator it = m_columns[col];
     if (it != m_linemap.end()){
       (*it).second = pc;
