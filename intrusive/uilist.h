@@ -184,10 +184,6 @@ public:
   static void destroy(tLstNd* root, Func dtorFn){
     if (root) destroy<Func>(*root, dtorFn);
   }
-  static void destroy(tLstNd& root){
-    destroy(root, [](Node* n){ delete n; });
-  }
-  static void destroy(tLstNd* root){ if (root) destroy(*root); }
   static void insert(tLstNd& na, tLstNd& nb){
     assert(na.mNxt && (nb.mNxt == nullptr || nb.mNxt == &nb));
     nb.mNxt = na.mNxt;

@@ -338,10 +338,6 @@ public:
   static void destroy(tLstNd* root, Func dtorFn){
     if (root) destroy(*root, dtorFn);
   }
-  static void destroy(tLstNd& root){
-    destroy(root, [](Node* n){ delete n; });
-  }
-  static void destroy(tLstNd* root){ if (root) destroy(*root); }
   static void insert_front(tLstNd& na, tLstNd& nb){
     assert(na.mNxt && na.mPrv &&
            (nb.mNxt == nullptr || nb.mNxt == &nb) &&
