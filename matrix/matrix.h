@@ -1,9 +1,13 @@
+#ifndef NN_MATRIX
+#define NN_MATRIX
+
 #include <cstddef>
 #include <cassert>
 #include <cstring>
 #include <cmath>
 #include <vector>
 #include <iostream>
+#include <fstream>
 using namespace std;
 
 #define D1Iter(i, ib, ie) \
@@ -19,6 +23,11 @@ const unsigned STRIDE = 32 * 1024; //TODO
 template <typename T> class RowRef;
 template <typename T> class ColRef;
 
+enum MtxDim {
+  MCol,
+  MRow,
+};
+
 /* column locality matrix */
 template <typename T>
 class Mtx {
@@ -28,6 +37,8 @@ class Mtx {
   mutable T* mData;
   size_t mRows;
   size_t mCols;
+
+  using IndexFP = size_t (Mtx::*)(size_t, size_t) const;
 
   size_t index(size_t r, size_t c) const {
     return r + c * mRows;
@@ -123,6 +134,25 @@ public:
 
     o.mData = nullptr;
     return *this;
+  }
+  explicit Mtx(const string& filename): mData(nullptr) {
+    ifstream in(filename.c_str());
+    if (not in.is_open()){
+      cout << "could not open input file " << filename << " to load" << endl;
+      return;
+    }
+
+    size_t r, c; in >> r >> c;
+
+    vector<T> vec; T v;
+    while (in >> v) vec.push_back(v);
+
+    mRows = r;
+    mCols = c;
+
+    mData = new T[vec.size()];
+
+    memcpy(mData, vec.data(), sizeof(T) * r * c);
   }
 
   /* accessors */
@@ -253,9 +283,9 @@ public:
     if (is_rotated() == o.is_rotated())
       D1Iter(i, 0U, mRows * mCols) transform(data[i], odata[i]);
     else if (o.is_rotated() && not is_rotated())
-      D2IterC(ir, ic, 0, mRows, 0, mCols) transform(data[index(ir, ic)], odata[rindex(ir, ic)]);
+      D2IterC(ir, ic, 0U, mRows, 0U, mCols) transform(data[index(ir, ic)], odata[rindex(ir, ic)]);
     else
-      D2IterC(ir, ic, 0, mRows, 0, mCols) transform(data[rindex(ir, ic)], odata[index(ir, ic)]);
+      D2IterC(ir, ic, 0U, mRows, 0U, mCols) transform(data[rindex(ir, ic)], odata[index(ir, ic)]);
     return *this;
   }
 
@@ -285,11 +315,28 @@ public:
     return ret;
   }
 
-  /* transpose function */
+  /* transpose functions */
+  //modify self to become transpose
   Mtx& t(){
     if (is_rotated()) flip_bit();
-    else             rotate();
+    else              rotate();
+
+    size_t tmp = mRows;
+    mRows = mCols;
+    mCols = tmp;
+
     return *this;
+  }
+  //return a copy of self that is transposed
+  Mtx transpose(){
+    Mtx ret = *this;
+    if (ret.is_rotated()) ret.flip_bit();
+    else                  ret.rotate();
+
+    ret.mRows = mCols;
+    ret.mCols = mRows;
+
+    return ret;
   }
 
   /* return matrix to column matrix, undo internal matrix rotation */
@@ -311,12 +358,82 @@ public:
   }
 
   /* statistics functions */
-//  vector<T> mean(){
-//    //TODO
-//  }
-//  vector<T> variance(){
-//    //TODO
-//  }
+  vector<size_t> maxi(MtxDim dim) const {
+    size_t n = dim == MCol ? mCols : mRows;
+    vector<size_t> ret(n, 0);
+    IndexFP indexfp = is_rotated() ? &Mtx::rindex : &Mtx::index;
+    T* data = dataptr();
+
+    if (dim == MCol){
+      D2IterC(ir, ic, 0, rows(), 0, cols())
+        if (data[(this->*indexfp)(ir, ic)] > data[(this->*indexfp)(ret[ic], ic)])
+          ret[ic] = ir;
+    } else {
+      D2IterC(ir, ic, 0, rows(), 0, cols())
+        if (data[(this->*indexfp)(ir, ic)] > data[(this->*indexfp)(ir, ret[ir])])
+          ret[ir] = ic;
+    }
+    return ret;
+  }
+  vector<size_t> mini(MtxDim dim) const {
+    size_t n = dim == MCol ? mCols : mRows;
+    vector<size_t> ret(n, 0);
+    IndexFP indexfp = is_rotated() ? &Mtx::rindex : &Mtx::index;
+    T* data = dataptr();
+
+    if (dim == MCol){
+      D2IterC(ir, ic, 0, rows(), 0, cols())
+        if (data[(this->*indexfp)(ir, ic)] < data[(this->*indexfp)(ret[ic], ic)])
+          ret[ic] = ir;
+    } else {
+      D2IterC(ir, ic, 0, rows(), 0, cols())
+        if (data[(this->*indexfp)(ir, ic)] < data[(this->*indexfp)(ir, ret[ir])])
+          ret[ir] = ic;
+    }
+    return ret;
+  }
+  vector<T> sum(MtxDim dim) const {
+    size_t n = dim == MCol ? mCols : mRows;
+    vector<T> ret(n, 0.);
+    IndexFP findex = is_rotated() ? &Mtx::rindex : &Mtx::index;
+    T* data = dataptr();
+
+    if (dim == MCol){
+      D2IterC(ir, ic, 0, rows(), 0, cols()) ret[ic] += data[(this->*findex)(ir, ic)];
+    } else {
+      D2IterR(ir, ic, 0, rows(), 0, cols()) ret[ir] += data[(this->*findex)(ir, ic)];
+    }
+    return ret;
+  }
+  vector<T> mean(MtxDim dim) const {
+    vector<T> ret = sum(dim);
+    size_t n = dim == MCol ? mRows : mCols;
+    D1Iter(i, 0, ret.size()) ret[i] /= (double)n;
+    return ret;
+  }
+
+  /* save matrix to file */
+  void save(const string& filename){
+    ofstream out; out.open(filename.c_str());
+
+    if (not out.is_open()){
+      cout << "could not open file " << filename << " to save" << endl;
+      return;
+    }
+
+    out << rows() << " " << cols() << " " << endl;
+
+    T* data = dataptr();
+    IndexFP indexp = is_rotated() ? &Mtx::rindex : &Mtx::index;
+
+    for (size_t ic = 0; ic < cols(); ++ic){
+      for (size_t ir = 0; ir < rows(); ++ir)
+        out << data[(this->*indexp)(ir, ic)] << " ";
+      out << endl;
+    }
+
+    out.close();
+  }
 };
 
 template <typename T>
@@ -331,7 +448,7 @@ public:
   T operator[](size_t c) const {
     assert(c < mMtx.cols() && mRowId < mMtx.rows());
     if (not mMtx.is_rotated()) return mMtx.dataptr()[mMtx.index(mRowId, c)];
-    else                       return mMtx.dataptr()[mMtx.rinde(mRowId, c)];
+    else                       return mMtx.dataptr()[mMtx.rindex(mRowId, c)];
   }
   T& operator[](size_t c){
     assert(c < mMtx.cols() && mRowId < mMtx.rows());
@@ -370,9 +487,9 @@ public:
   template <typename F>
   RowRef& foreach(F transform){
     if (not mMtx.is_rotated())
-      D1Iter(i, 0, mMtx.cols()) mMtx.dataptr()[mMtx.index(mRowId, i)] = F(mMtx.dataptr()[mMtx.index(mRowId, i)]);
+      D1Iter(i, 0, mMtx.cols()) transform(mMtx.dataptr()[mMtx.index(mRowId, i)]);
     else
-      D1Iter(i, 0, mMtx.cols()) mMtx.dataptr()[mMtx.rindex(mRowId, i)] = F(mMtx.dataptr()[mMtx.rindex(mRowId, i)]);
+      D1Iter(i, 0, mMtx.cols()) transform(mMtx.dataptr()[mMtx.rindex(mRowId, i)]);
     return *this;
   }
 };
@@ -428,9 +545,9 @@ public:
   template <typename F>
   ColRef& foreach(F transform){
     if (not mMtx.is_rotated())
-      D1Iter(i, 0, mMtx.rows()) mMtx.dataptr()[mMtx.index(i, mColId)] = F(mMtx.dataptr()[mMtx.index(i, mColId)]);
+      D1Iter(i, 0, mMtx.rows()) transform(mMtx.dataptr()[mMtx.index(i, mColId)]);
     else
-      D1Iter(i, 0, mMtx.rows()) mMtx.dataptr()[mMtx.rindex(i, mColId)] = F(mMtx.dataptr()[mMtx.rindex(i, mColId)]);
+      D1Iter(i, 0, mMtx.rows()) transform(mMtx.dataptr()[mMtx.rindex(i, mColId)]);
     return *this;
   }
 };
@@ -500,3 +617,5 @@ ostream& operator<<(ostream& out, const ColRef<T>& cr){
   out << endl;
   return out;
 }
+
+#endif

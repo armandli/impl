@@ -13,7 +13,6 @@ using tt = double;
 
 TEST(CD, Construction){
   Mtx<tt> def;
-  cout << "default matrix constructor: " << def.rows() << "*" << def.cols() << endl;
 
   Mtx<tt> cm(2, 3, 10.);
   
@@ -123,6 +122,18 @@ TEST(Transpose, Transpose){
       EXPECT_EQ(v3[i + j * 1], e(i, j));
 }
 
+TEST(SaveLoadMatrix, SaveLoadMatrix){
+  Mtx<tt> a(10, 10, 0.);
+  D2IterC(ir, ic, 0, a.rows(), 0, a.cols()) a(ir, ic) = ir * ic + 1.;
+  a.save("tmp.mtx");
+
+  Mtx<tt> b(string("tmp.mtx"));
+
+  EXPECT_EQ(a.rows(), b.rows());
+  EXPECT_EQ(a.cols(), b.cols());
+  D2IterC(ir, ic, 0, a.rows(), 0, a.cols()) EXPECT_DOUBLE_EQ(a(ir, ic), b(ir, ic));
+}
+
 struct ArithTest : ::testing::Test {
   ArithTest(){
     vector<tt> va = {1., 2., 3., 4., 5., 6., 7., 8., 9.};
@@ -130,13 +141,13 @@ struct ArithTest : ::testing::Test {
     vector<tt> vc = {1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.};
     vector<tt> vd = {1., 2., 3.};
 
-    vector<tt> ve;
+    vector<tt> ve(1000 * 1000);
     for (size_t i = 0; i < 1000 * 1000; ++i)
-      ve.push_back((double)rand() / 10.);
+      ve[i] = (double)rand() / 10.;
 
-    vector<tt> vf;
+    vector<tt> vf(100 * 100);
     for (size_t i = 0; i < 100 * 100; ++i)
-      vf.push_back((double)rand() / 10.);
+      vf[i] = (double)rand() / 10.;
 
     a = Mtx<tt>(3, 3, va);
     b = Mtx<tt>(2, 3, vb);
@@ -153,6 +164,41 @@ struct ArithTest : ::testing::Test {
 
   Mtx<tt> a, b, c, d, e, f, g, h, i, j, k;
 };
+
+TEST_F(ArithTest, Transpose){
+  Mtx<tt> ta = a.transpose();
+  vector<tt> expected1 = {1., 4., 7., 2., 5., 8., 3., 6., 9.};
+  EXPECT_EQ(3, ta.rows());
+  EXPECT_EQ(3, ta.cols());
+  D2IterC(ir, ic, 0, ta.rows(), 0, ta.cols()) EXPECT_DOUBLE_EQ(expected1[ir + ic * ta.rows()], ta(ir, ic));
+
+  Mtx<tt> te = e.transpose();
+  vector<tt> expected2 = {1., 5., 9., 2., 6., 10., 3., 7., 11., 4., 8., 12.};
+  EXPECT_EQ(3, te.rows());
+  EXPECT_EQ(4, te.cols());
+  D2IterC(ir, ic, 0, te.rows(), 0, te.cols()) EXPECT_DOUBLE_EQ(expected2[ir + ic * te.rows()], te(ir, ic));
+
+  Mtx<tt> tg = g.transpose();
+  vector<tt> expected3 = {1., 2., 3.};
+  EXPECT_EQ(1, tg.rows());
+  EXPECT_EQ(3, tg.cols());
+  D2IterC(ir, ic, 0, tg.rows(), 0, tg.cols()) EXPECT_DOUBLE_EQ(expected3[ir + ic * tg.rows()], tg(ir, ic));
+
+  a.t();
+  EXPECT_EQ(3, a.rows());
+  EXPECT_EQ(3, a.cols());
+  D2IterC(ir, ic, 0, a.rows(), 0, a.cols()) EXPECT_DOUBLE_EQ(expected1[ir + ic * a.rows()], a(ir, ic));
+
+  e.t();
+  EXPECT_EQ(3, e.rows());
+  EXPECT_EQ(4, e.cols());
+  D2IterC(ir, ic, 0, e.rows(), 0, e.cols()) EXPECT_DOUBLE_EQ(expected2[ir + ic * e.rows()], e(ir, ic));
+
+  g.t();
+  EXPECT_EQ(1, g.rows());
+  EXPECT_EQ(3, g.cols());
+  D2IterC(ir, ic, 0, g.rows(), 0, g.cols()) EXPECT_DOUBLE_EQ(expected3[ir + ic * g.rows()], g(ir, ic));
+}
 
 TEST_F(ArithTest, AddScalar){
   tt val = 13.;
@@ -295,6 +341,63 @@ TEST_F(ArithTest, DotMtx){
   std::cout << "Perf 100 * 100: " << (clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
 }
 
+TEST_F(ArithTest, Sum){
+  vector<tt> sum1 = d.sum(MRow);
+  vector<tt> expected1 = {22., 26., 30.};
+  D1Iter(i, 0, expected1.size()) EXPECT_DOUBLE_EQ(expected1[i], sum1[i]);
+
+  vector<tt> sum2 = d.sum(MCol);
+  vector<tt> expected2 = {6., 15., 24., 33.};
+  D1Iter(i, 0, expected2.size()) EXPECT_DOUBLE_EQ(expected2[i], sum2[i]);
+
+  vector<tt> sum3 = f.sum(MCol);
+  vector<tt> expected3 = {1., 2., 3.};
+  D1Iter(i, 0, expected3.size()) EXPECT_DOUBLE_EQ(expected3[i], sum3[i]);
+
+  vector<tt> sum4 = f.sum(MRow);
+  vector<tt> expected4 = {6.};
+  D1Iter(i, 0, expected4.size()) EXPECT_DOUBLE_EQ(expected4[i], sum4[i]);
+}
+
+TEST_F(ArithTest, Mean){
+  vector<tt> sum1 = d.mean(MRow);
+  vector<tt> expected1 = {5.5, 6.5, 7.5};
+  D1Iter(i, 0, expected1.size()) EXPECT_DOUBLE_EQ(expected1[i], sum1[i]);
+
+  vector<tt> sum2 = d.mean(MCol);
+  vector<tt> expected2 = {2., 5., 8., 11.};
+  D1Iter(i, 0, expected2.size()) EXPECT_DOUBLE_EQ(expected2[i], sum2[i]);
+
+  vector<tt> sum3 = f.mean(MCol);
+  vector<tt> expected3 = {1., 2., 3.};
+  D1Iter(i, 0, expected3.size()) EXPECT_DOUBLE_EQ(expected3[i], sum3[i]);
+
+  vector<tt> sum4 = f.mean(MRow);
+  vector<tt> expected4 = {2.};
+  D1Iter(i, 0, expected4.size()) EXPECT_DOUBLE_EQ(expected4[i], sum4[i]);
+}
+
+TEST_F(ArithTest, Maxi){
+  vector<size_t> va = a.maxi(MCol);
+  vector<size_t> expected1 = {2, 2, 2};
+  D1Iter(i, 0, a.cols()) EXPECT_EQ(expected1[i], va[i]);
+
+  vector<size_t> vb = a.maxi(MRow);
+  vector<size_t> expected2 = {2, 2, 2};
+  D1Iter(i, 0, a.rows()) EXPECT_EQ(expected2[i], vb[i]);
+}
+
+TEST_F(ArithTest, Mini){
+  vector<size_t> va = a.mini(MCol);
+  vector<size_t> expected1 = {0, 0, 0};
+  D1Iter(i, 0, a.cols()) EXPECT_EQ(expected1[i], va[i]);
+
+  vector<size_t> vb = a.mini(MRow);
+  vector<size_t> expected2 = {0, 0, 0};
+  D1Iter(i, 0, a.rows()) EXPECT_EQ(expected2[i], vb[i]);
+}
+
+
 TEST_F(ArithTest, RowRef){
   vector<tt> expected1 = {3., 6., 9.};
   RowRef<tt> ar = a.row(2);
@@ -329,4 +432,26 @@ TEST_F(ArithTest, ColRef){
   vector<tt> expected4 = {1., 2., 3.};
   ColRef<tt> gc = g.col(0);
   D1Iter(i, 0, g.rows()) EXPECT_DOUBLE_EQ(expected4[i], gc[i]);
+}
+
+TEST_F(ArithTest, RowRefForeach){
+  for (size_t i = 0; i < a.rows(); ++i){
+    RowRef<tt> r = a.row(i);
+    r.foreach([i](tt& d){
+        d = d * i;
+    });
+  }
+  vector<tt> expected1 = {0., 2., 6., 0., 5., 12., 0., 8., 18.};
+  D2IterC(ir, ic, 0, a.rows(), 0, a.cols()) EXPECT_DOUBLE_EQ(expected1[ir + ic * a.rows()], a(ir, ic));
+}
+
+TEST_F(ArithTest, ColRefForeach){
+  for (size_t i = 0; i < e.cols(); ++i){
+    ColRef<tt> c = e.col(i);
+    c.foreach([i](tt& d){
+        d = d * i;
+    });
+  }
+  vector<tt> expected1 = {0., 0., 0., 0., 5., 6., 7., 8., 18., 20., 22., 24.};
+  D2IterC(ir, ic, 0, e.rows(), 0, e.cols()) EXPECT_DOUBLE_EQ(expected1[ir + ic * e.rows()], e(ir, ic));
 }
