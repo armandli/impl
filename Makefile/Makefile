@@ -11,7 +11,7 @@ INCLUDES=
 OPT=
 LIBS=
 
-CXXFLAGS=-std=c++17 -MD -O3 -Wall -Wextra $(OPT) $(DEBUG)
+CXXFLAGS=-std=c++17 -MD -O3 -Wall -Wextra $(INCLUDES) $(OPT) $(DEBUG)
 CXXLINKS=$(CXXFLAGS) $(LIBS)
 
 COMPILER=clang++
