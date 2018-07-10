@@ -15,12 +15,12 @@ LIBS=-lgtest -lgtest_main
 INCLUDES=-I../ -I./ -I/user/include
 
 CXXFLAGS=-std=c++17 -MD -Wall -Wextra -pthread $(INCLUDES) $(OPT) $(DEBUG)
-CXXLINK=$(CXXFLAGS) $(LIBS)
+CXXLINKS=$(CXXFLAGS) $(LIBS)
 
 COMPILER=clang++
 
 $(app): %: %.o $(OBJECTS)
-	$(COMPILER) $(CXXLINK) $^ -o $@
+	$(COMPILER) $(CXXLINKS) $^ -o $@
 
 %.o: %.cpp
 	$(COMPILER) $(CXXFLAGS) -c $^

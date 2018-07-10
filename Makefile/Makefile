@@ -7,12 +7,20 @@ OBJECTS=$(SOURCES:.cpp=.o)
 all: $(app)
 
 DEBUG=
+INCLUDES=
+OPT=
 LIBS=
 
-CXXFLAGS= -MD -O3 -std=gnu++11 -Wall -Wextra $(LIBS) $(DEBUG)
+CXXFLAGS=-std=c++17 -MD -O3 -Wall -Wextra $(OPT) $(DEBUG)
+CXXLINKS=$(CXXFLAGS) $(LIBS)
+
+COMPILER=clang++
 
 $(app): %: %.o $(OBJECTS)
-	g++ -g -O2 -std=gnu++11 $^ -o $@
+	$(COMPILER) $(CXXLINKS) $^ -o $@
+
+%.o: %.cpp
+	$(COMPILER) $(CXXFLAGS) -c $^
 
 -include $(SOURCES:=.d) $(apps:=.d)
 
