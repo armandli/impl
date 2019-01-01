@@ -72,3 +72,11 @@ float frsqrt2(float f){
   f = f * (1.5F - xhalf * f * f);
   return f;
 }
+
+//more optimal inverse squareroot
+float frsqrt3(float f){
+  uint32_t i = asInt(f);
+  i = 0x5F1FFFF9U - (i >> 1);
+  float f2 = toFloat(i);
+  return 0.703952253F * f2 * (2.38924456F - f * f2 * f2);
+}

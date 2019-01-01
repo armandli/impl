@@ -1,21 +1,21 @@
-app=
+app=test_naive_trie
 
-SOURCES=
+SOURCES=test_naive_trie.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 
 all: $(app)
 
 DEBUG=
-INCLUDES=
-OPT=
-LIBS=
+INCLUDES=-I./
+OPT=-O3
+LIBS=-lgtest -lgtest_main
 DEFINES=
 
-CXXFLAGS=-std=c++17 -MD -pedantic -pedantic-errors -O3 -Wall -Wextra $(DEFINES) $(INCLUDES) $(OPT) $(DEBUG)
+CXXFLAGS=-std=c++17 -MD -pedantic -pedantic-errors -Wall -Wextra $(DEFINES) $(INCLUDES) $(OPT) $(DEBUG)
 CXXLINKS=$(CXXFLAGS) $(LIBS)
 
-COMPILER=clang++
+COMPILER=g++
 
 $(app): %: %.o $(OBJECTS)
 	$(COMPILER) $(CXXLINKS) $^ -o $@
