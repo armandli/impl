@@ -46,3 +46,21 @@ static void bm_rand(b::State& st){
   }
 }
 BENCHMARK(bm_rand);
+
+static void bm_mt19937(b::State& st){
+  s::vector<uint32_t> res;
+  s::mt19937 mt;
+  for (auto _ : st){
+    res.push_back(mt());
+  }
+}
+BENCHMARK(bm_mt19937);
+
+static void bm_mt19937_64(b::State& st){
+  s::vector<uint32_t> res;
+  s::mt19937_64 mt;
+  for (auto _ : st){
+    res.push_back(mt());
+  }
+}
+BENCHMARK(bm_mt19937_64);

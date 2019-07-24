@@ -4,7 +4,12 @@
 #include <ctime>
 #include <unistd.h>
 
+#include <vector>
+#include <iostream>
+
 #include <gtest/gtest.h>
+
+namespace s = std;
 
 TEST(PCG, Test1){
   pcg dev;
@@ -64,4 +69,61 @@ TEST(PCG, TestNotEqual){
   pcg dev2(time(nullptr));
   int t1 = dev1(), t2 = dev2();
   EXPECT_FALSE(t1 == t2);
+}
+
+TEST(XORSHIFT, TestDistribution1){
+  xorshift dev(time(nullptr));
+
+  size_t sz = 100;
+  s::vector<int> dist(sz);
+  for (size_t i = 0; i < 100000; ++i){
+    int val = dev() % sz;
+    dist[val]++;
+  }
+
+  s::cout << "XORSHIFT Distribution:" << '\n';
+  for (size_t i = 0; i < sz; ++i){
+    for (int j = 0; j < dist[i]; j += 100)
+      s::cout << '*';
+    s::cout << '\n';
+  }
+  s::cout << s::endl;
+}
+
+TEST(SPLITMIX, TestDistribution1){
+  splitmix dev(time(nullptr));
+
+  size_t sz = 100;
+  s::vector<int> dist(sz);
+  for (size_t i = 0; i < 100000; ++i){
+    int val = dev() % sz;
+    dist[val]++;
+  }
+
+  s::cout << "SPLITMIX Distribution:" << '\n';
+  for (size_t i = 0; i < sz; ++i){
+    for (int j = 0; j < dist[i]; j += 100)
+      s::cout << '*';
+    s::cout << '\n';
+  }
+  s::cout << s::endl;
+}
+
+TEST(PCG, TestDistribution1){
+  pcg dev(time(nullptr));
+
+  size_t sz = 100;
+  s::vector<int> dist(sz);
+  for (size_t i = 0; i < 100000; ++i){
+    int val = dev() % sz;
+    dist[val]++;
+  }
+
+  s::cout << "PCG Distribution:" << '\n';
+  for (size_t i = 0; i < sz; ++i){
+    for (int j = 0; j < dist[i]; j += 100)
+      s::cout << '*';
+    s::cout << '\n';
+  }
+  s::cout << s::endl;
 }
