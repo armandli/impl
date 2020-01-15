@@ -32,3 +32,12 @@ TEST(power, TestPower6){
   EXPECT_EQ(2, h);
 }
 
+TEST(power, TestPower7){
+  unsigned h = nearest_power_2(5);
+  EXPECT_EQ(8, h);
+}
+
+TEST(power, TestPower8){
+  unsigned h = nearest_power_2(2000);
+  EXPECT_EQ(2048, h);
+}

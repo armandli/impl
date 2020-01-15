@@ -1,4 +1,5 @@
-// compute the nearest power of 2
+// compute the nearest power of 2, rounded up
+// return the value that is a power of 2
 unsigned nearest_power_2(unsigned v){
   v--;
   v |= v >> 1U;
