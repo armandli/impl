@@ -15,7 +15,7 @@ constexpr double EPSILON = 1e-15;
 
 // assume size of v is a power of 2
 s::vector<cmplx> bit_reversal_permute(const s::vector<cmplx>& v){
-  assert(v.size() >= 2);
+  assert(v.size() >= 1);
 
   s::vector<size_t> idx; idx.reserve(v.size());
   idx.push_back(0);
