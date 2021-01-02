@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cmath>
+#include <algorithm>
 
 namespace s = std;
 
@@ -55,8 +56,7 @@ NUM_SOLUTIONS gaussian_elimination(T* x, T** mtx, size_t nrow, size_t ncol){
     ++r;
   }
 
-  for (size_t i = 0; i < ncol - 1; ++i)
-    x[i] = 0.;
+  s::fill(x, &x[ncol - 1], 0.);
   size_t min_size = nrow < ncol - 1 ? nrow : ncol - 1;
   NUM_SOLUTIONS s = min_size < ncol - 1 ? NUM_SOLUTIONS::INF : NUM_SOLUTIONS::ONE;
   for (size_t r = 0, c = 0; c < min_size; ++c){

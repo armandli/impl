@@ -26,4 +26,9 @@ TEST(Test, GaussianElimination1){
   EXPECT_DOUBLE_EQ(3.5, x[0]);
   EXPECT_DOUBLE_EQ(1., x[1]);
   EXPECT_DOUBLE_EQ(2.5, x[2]);
+
+  for (size_t i = 0; i < nrow; ++i)
+    delete[] matrix[i];
+  delete[] matrix;
+  delete[] x;
 }
